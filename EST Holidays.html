@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EST Movement Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0e2233;        /* deep marine navy */
+  --paper:#f6f8f9;      /* cool off-white */
+  --card:#ffffff;
+  --line:#d4dde3;
+  --accent:#ff8a00;     /* signal orange */
+  --holiday:#1273b5;    /* sea blue */
+  --medical:#c0392b;    /* signal red */
+  --vessel:#0d7a5f;     /* deck green */
+  --unplanned:#7a4ea3;  /* violet */
+  --muted:#5b6f7d;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh}
+header{background:var(--ink);color:#fff;padding:18px 16px 14px}
+header .brand{max-width:980px;margin:0 auto;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+header h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;letter-spacing:.04em;text-transform:uppercase}
+header h1 span{color:var(--accent)}
+header .sub{font-size:13px;color:#9fb3c0}
+nav{background:var(--ink);padding:0 16px 0}
+nav .tabs{max-width:980px;margin:0 auto;display:flex;gap:6px}
+nav button{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:14px 8px;border:none;border-radius:12px 12px 0 0;background:#1c3a52;color:#aebfca;cursor:pointer;min-height:52px}
+nav button.active{background:var(--paper);color:var(--ink)}
+nav button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+h2{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 6px;color:var(--muted)}
+input[type=text],input[type=date],select,textarea{width:100%;padding:14px;font-size:17px;border:2px solid var(--line);border-radius:10px;font-family:inherit;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.reason-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:8px}
+.reason-btn{min-height:84px;border:3px solid var(--line);border-radius:var(--radius);background:#fff;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px}
+.reason-btn .code{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;padding:2px 10px;border-radius:6px;color:#fff;background:var(--muted)}
+.reason-btn.selected{border-color:currentColor;box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+.reason-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.big-btn{width:100%;min-height:64px;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;cursor:pointer;margin-top:22px}
+.big-btn:hover{filter:brightness(1.06)}
+.big-btn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.btn{padding:12px 18px;font-size:15px;font-weight:600;border:2px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);cursor:pointer;min-height:48px}
+.btn.solid{background:var(--ink);color:#fff}
+.btn.danger{border-color:var(--medical);color:var(--medical)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:15px;margin-top:10px}
+th{font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:.06em;text-transform:uppercase;text-align:left;color:var(--muted);border-bottom:2px solid var(--ink);padding:8px 6px}
+td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:#fff;padding:3px 9px;border-radius:6px}
+.dept-head{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-left:6px solid var(--accent);padding-left:10px;margin:22px 0 4px}
+.muted{color:var(--muted);font-size:14px}
+.del{background:none;border:none;color:var(--medical);font-size:18px;cursor:pointer;min-width:44px;min-height:44px}
+.list-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.add-row{display:flex;gap:10px;margin-top:12px}
+.add-row input{flex:1}
+.hidden{display:none!important}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 26px;border-radius:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
+.toast.show{opacity:1}
+.note{background:#fff7ec;border:1px solid #ffd9a8;border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:16px}
+@media print{header,nav,.no-print{display:none!important}main{max-width:100%}.card{border:none;padding:0}body{background:#fff}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>EST <span>Movement</span> Sheet</h1>
+    <div class="sub">Weekly office attendance &amp; absence log</div>
+  </div>
+</header>
+<nav><div class="tabs">
+  <button id="tab-log" class="active" onclick="showTab('log')">Log Absence</button>
+  <button id="tab-report" onclick="showTab('report')">Weekly Report</button>
+  <button id="tab-settings" onclick="showTab('settings')">Settings</button>
+</div></nav>
+<main>
+
+<!-- ============ LOG TAB ============ -->
+<section id="view-log">
+  <div class="card">
+    <h2>New Absence Entry</h2>
+    <div class="row">
+      <div>
+        <label for="empSel">Employee</label>
+        <select id="empSel" onchange="empPicked()"></select>
+        <div id="newEmpBox" class="hidden">
+          <label for="empName">New employee name</label>
+          <input type="text" id="empName" placeholder="e.g. G. Papadopoulos" autocomplete="off">
+        </div>
+      </div>
+      <div>
+        <label for="empDept">Department</label>
+        <select id="empDept"></select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="dateFrom">From</label>
+        <input type="date" id="dateFrom">
+      </div>
+      <div>
+        <label for="dateTo">To</label>
+        <input type="date" id="dateTo">
+      </div>
+    </div>
+    <label>Reason</label>
+    <div class="reason-grid" id="reasonGrid"></div>
+    <div id="vesselBox" class="hidden">
+      <label for="vesselSel">Vessel</label>
+      <select id="vesselSel"></select>
+    </div>
+    <label for="entryNote">Note (optional)</label>
+    <input type="text" id="entryNote" placeholder="Any extra detail">
+    <button class="big-btn" onclick="saveEntry()">Save Entry</button>
+  </div>
+
+  <div class="card">
+    <h2>Recent Entries</h2>
+    <div id="recentList" class="muted">No entries yet.</div>
+  </div>
+</section>
+
+<!-- ============ REPORT TAB ============ -->
+<section id="view-report" class="hidden">
+  <div class="card no-print">
+    <h2>Weekly Report</h2>
+    <p class="muted">Pick any date — the report covers that week (Monday to Sunday). Send the report every Friday by 17:00.</p>
+    <label for="weekDate">Week of</label>
+    <input type="date" id="weekDate" onchange="renderReport()">
+    <div class="btn-row">
+      <button class="btn solid" onclick="copyReport()">Copy as text for email</button>
+      <button class="btn" onclick="window.print()">Print / Save PDF</button>
+    </div>
+  </div>
+  <div class="card" id="reportOut"></div>
+</section>
+
+<!-- ============ SETTINGS TAB ============ -->
+<section id="view-settings" class="hidden">
+  <div class="note">Data is saved in this browser only (localStorage). Use <strong>Export</strong> regularly as backup, or to move data to another computer via <strong>Import</strong>.</div>
+  <div class="card">
+    <h2>Employees</h2>
+    <p class="muted">Duplicate names are flagged automatically and not added twice.</p>
+    <div id="empListSettings"></div>
+    <div class="add-row">
+      <input type="text" id="newEmpName" placeholder="Employee name">
+      <select id="newEmpDept" style="width:auto;max-width:45%"></select>
+      <button class="btn solid" onclick="addEmployee()">Add</button>
+    </div>
+    <label for="bulkEmps">Or paste a whole list — one per line, format: Name, Department (department optional)</label>
+    <textarea id="bulkEmps" rows="5" placeholder="G. Papadopoulos, Technical&#10;M. Ioannou, Accounts&#10;K. Nikolaou"></textarea>
+    <div class="btn-row"><button class="btn solid" onclick="bulkAddEmployees()">Add list</button></div>
+  </div>
+  <div class="card">
+    <h2>Reasons</h2>
+    <p class="muted">Reasons can be renamed or removed. "Requires vessel" reasons will ask for a vessel name.</p>
+    <div id="reasonList"></div>
+    <div class="add-row">
+      <input type="text" id="newReason" placeholder="New reason name">
+      <label style="display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap"><input type="checkbox" id="newReasonVessel" style="width:auto"> vessel?</label>
+      <button class="btn solid" onclick="addReason()">Add</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Vessels</h2>
+    <div id="vesselList"></div>
+    <div class="add-row">
+      <input type="text" id="newVessel" placeholder="New vessel name">
+      <button class="btn solid" onclick="addVessel()">Add</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Departments</h2>
+    <div id="deptList"></div>
+    <div class="add-row">
+      <input type="text" id="newDept" placeholder="New department name">
+      <button class="btn solid" onclick="addDept()">Add</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Data</h2>
+    <div class="btn-row">
+      <button class="btn solid" onclick="exportData()">Export backup (JSON)</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">Import backup</button>
+      <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+      <button class="btn danger" onclick="clearAll()">Delete all entries</button>
+    </div>
+  </div>
+</section>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- storage ---------- */
+const K = {entries:'est_entries', reasons:'est_reasons', vessels:'est_vessels', depts:'est_depts', emps:'est_employees'};
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+let entries = load(K.entries, []);
+let reasons = load(K.reasons, [
+  {id:'H',  name:'Holiday',           color:'#1273b5', vessel:false},
+  {id:'M',  name:'Medical',           color:'#c0392b', vessel:false},
+  {id:'VA', name:'Vessel Attendance', color:'#0d7a5f', vessel:true},
+  {id:'U',  name:'Unplanned Absence', color:'#7a4ea3', vessel:false}
+]);
+const DEFAULT_VESSELS = ["ALORA", "CITIUS", "COLOSSUS", "CONSTANTIA (ex GOTIA)", "DIVINUS", "ENERGY ACHILLES", "ENERGY AFRODITE", "ENERGY APOLLO", "ENERGY ARIADNE", "ENERGY ARTEMIS", "ENERGY ATHENA", "ENERGY CENTAUR", "ENERGY DELOS", "ENERGY DIONE", "ENERGY TRIUMPH", "FURIOUS", "GLADIATOR", "GOOD HOPE MAX", "IMPERIUS", "JAGUAR MAX", "LIVORNO", "MAGIC STRIKER", "PANTHER MAX", "PUMA MAX", "TAURUS", "VIRTUOUS STRIKER", "WARRIOR"];
+let vessels = load(K.vessels, DEFAULT_VESSELS);
+const DEFAULT_DEPTS = ["Management", "Chartering (Bulk Carriers)", "Chartering (Tankers)", "Technical", "Spares", "Forwarding", "Operations", "Operations (Tankers) / Vetting", "Crew / ISPS - Security", "Treasury", "Finance", "Legal", "QHSE / ISM", "Protocol", "Reception", "Cafeteria - Store Room", "F-Estimation S.A.", "E.D.P. (IT)", "Freight", "Supply", "Control", "Claims", "Accounts", "Banking"];
+let depts = load(K.depts, DEFAULT_DEPTS);
+const DEFAULT_EMPLOYEES = [{"name": "George Sarris", "dept": "Management"}, {"name": "Maria Zampeli", "dept": "Management"}, {"name": "Natassa Petri", "dept": "Management"}, {"name": "Dimitra Karadimou", "dept": "Management"}, {"name": "George Kalogeropoulos", "dept": "Chartering (Bulk Carriers)"}, {"name": "Stelios Charmesizis", "dept": "Chartering (Bulk Carriers)"}, {"name": "Xenia Rigou", "dept": "Chartering (Bulk Carriers)"}, {"name": "Mary Diamantopoulou", "dept": "Chartering (Bulk Carriers)"}, {"name": "Kyriakos Zarvanos", "dept": "Chartering (Tankers)"}, {"name": "Sakis Kechagioglou", "dept": "Chartering (Tankers)"}, {"name": "Vangelis Candiotis", "dept": "Technical"}, {"name": "Thanasis Papachatzis", "dept": "Technical"}, {"name": "George Chronis", "dept": "Technical"}, {"name": "Ioannis Pavlou", "dept": "Technical"}, {"name": "Antonis Polikandriotis", "dept": "Technical"}, {"name": "Goulielmos Roussos", "dept": "Technical"}, {"name": "Ilias Kokiopoulos", "dept": "Technical"}, {"name": "Aris Ziatas", "dept": "Technical"}, {"name": "Charalampos Kremidas", "dept": "Technical"}, {"name": "George Tzortzis", "dept": "Technical"}, {"name": "Spiros Karnadakis", "dept": "Technical"}, {"name": "Antonios Psyllas", "dept": "Technical"}, {"name": "Nikolaos Loizos", "dept": "Technical"}, {"name": "Panagiotis Ziakas", "dept": "Technical"}, {"name": "Nikos Linardos", "dept": "Technical"}, {"name": "Lia Karagianni", "dept": "Technical"}, {"name": "Katerina Mermigka", "dept": "Technical"}, {"name": "Sophia Drosou", "dept": "Technical"}, {"name": "Jenny Georgala", "dept": "Spares"}, {"name": "Anthea Sarri", "dept": "Spares"}, {"name": "Nena Pleoura", "dept": "Spares"}, {"name": "Georgia Souti", "dept": "Spares"}, {"name": "Martha Lekka", "dept": "Spares"}, {"name": "Konstantina Georgala", "dept": "Spares"}, {"name": "Bella Politis", "dept": "Forwarding"}, {"name": "Michalis Koutsodontis", "dept": "Forwarding"}, {"name": "Elias Hadjithomas", "dept": "Operations"}, {"name": "Kostas Angelaras", "dept": "Operations"}, {"name": "Vassilis Ferentouros", "dept": "Operations"}, {"name": "Andreas Toubakaris", "dept": "Operations"}, {"name": "Elias Dimakopoulos", "dept": "Operations"}, {"name": "Filippos Fasilis", "dept": "Operations"}, {"name": "Vitaliy Skidanov", "dept": "Operations"}, {"name": "Panagiotis Katsafaros", "dept": "Operations"}, {"name": "Anastasia Argiriou", "dept": "Operations"}, {"name": "Tasos Triantafillidis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Thanasis Papantonis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Orestis Perilis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Theodore Voryllas", "dept": "Operations (Tankers) / Vetting"}, {"name": "Aristeidis Zoros", "dept": "Operations (Tankers) / Vetting"}, {"name": "Katerina Molfeta", "dept": "Operations (Tankers) / Vetting"}, {"name": "Maria Tzavara", "dept": "Operations (Tankers) / Vetting"}, {"name": "Nefeli Triantafillidi", "dept": "Operations (Tankers) / Vetting"}, {"name": "John Georgalas", "dept": "Crew / ISPS - Security"}, {"name": "Christoforos Bissias", "dept": "Crew / ISPS - Security"}, {"name": "Konstantinos Arkoudis", "dept": "Crew / ISPS - Security"}, {"name": "Katerina Karoussou", "dept": "Crew / ISPS - Security"}, {"name": "Angeliki Panagiotarou", "dept": "Crew / ISPS - Security"}, {"name": "Elina Koukouli", "dept": "Crew / ISPS - Security"}, {"name": "Irene Kritikou", "dept": "Treasury"}, {"name": "Dimitra Arabatzi", "dept": "Treasury"}, {"name": "Efi Kiskira", "dept": "Treasury"}, {"name": "George Kakoulidis", "dept": "Finance"}, {"name": "Georgia Ropali", "dept": "Finance"}, {"name": "Georgia Kobougia", "dept": "Finance"}, {"name": "Katerina Karagouni", "dept": "Legal"}, {"name": "Dimitra Kousiouri", "dept": "Legal"}, {"name": "Evi Zachari", "dept": "Legal"}, {"name": "Katerina Zabeli", "dept": "Legal"}, {"name": "Sofia Zogana", "dept": "QHSE / ISM"}, {"name": "Katerina Gemidopoulou", "dept": "QHSE / ISM"}, {"name": "Anna Tsesmeloglou", "dept": "QHSE / ISM"}, {"name": "Georgia Rina", "dept": "QHSE / ISM"}, {"name": "Anastasia Kitso", "dept": "QHSE / ISM"}, {"name": "Nicole Tserkezou", "dept": "QHSE / ISM"}, {"name": "Xenia Lolou", "dept": "Protocol"}, {"name": "Filio Bakaouka", "dept": "Reception"}, {"name": "Giannis Christou", "dept": "Reception"}, {"name": "George Tougoutzoglou", "dept": "Reception"}, {"name": "Nikos Loutrianakis", "dept": "Reception"}, {"name": "Renata Lukasiak", "dept": "Cafeteria - Store Room"}, {"name": "Evaggelia Pouriki", "dept": "Cafeteria - Store Room"}, {"name": "Beata Borys", "dept": "Cafeteria - Store Room"}, {"name": "Christos Pourikis", "dept": "Cafeteria - Store Room"}, {"name": "Dimitris Drakopoulos", "dept": "Cafeteria - Store Room"}, {"name": "Gerasimos Avgeris", "dept": "F-Estimation S.A."}, {"name": "Haris Lourida", "dept": "F-Estimation S.A."}, {"name": "Costas Roussos", "dept": "E.D.P. (IT)"}, {"name": "Thanassis Leventakis", "dept": "E.D.P. (IT)"}, {"name": "Stamatis Gizas", "dept": "E.D.P. (IT)"}, {"name": "Costas Zarmakoupis", "dept": "E.D.P. (IT)"}, {"name": "Marinos Mavrommatis", "dept": "Freight"}, {"name": "Evy Vamvoulis", "dept": "Freight"}, {"name": "Marietta Bonn", "dept": "Supply"}, {"name": "Stavros Lymperis", "dept": "Supply"}, {"name": "Hara Kalodouka", "dept": "Supply"}, {"name": "Maria Triantafillou", "dept": "Supply"}, {"name": "Evina Mayiorkinou", "dept": "Supply"}, {"name": "Panagiota Limperopoulou", "dept": "Supply"}, {"name": "Fotini Giannouli", "dept": "Supply"}, {"name": "Mina Seitanidou", "dept": "Control"}, {"name": "Minas Mavrommatis", "dept": "Control"}, {"name": "Konstantinos Leotatis", "dept": "Control"}, {"name": "Christina Lourentzatou", "dept": "Control"}, {"name": "Vassilis Georgakopoulos", "dept": "Claims"}, {"name": "Vassilis Papaiakovou", "dept": "Claims"}, {"name": "Dimitris Vergis", "dept": "Claims"}, {"name": "Mariaelen Kavvadia", "dept": "Claims"}, {"name": "Aggelos Mitrossis", "dept": "Accounts"}, {"name": "Eleni Labrou", "dept": "Accounts"}, {"name": "Spiros Tzatzanis", "dept": "Accounts"}, {"name": "George Ziotopoulos", "dept": "Accounts"}, {"name": "Eleni Boura", "dept": "Accounts"}, {"name": "Athanasia Boura", "dept": "Accounts"}, {"name": "Konstantinos Panagopoulos", "dept": "Accounts"}, {"name": "Chrisoula Gerodimou", "dept": "Banking"}, {"name": "Thomae Nikolaou", "dept": "Banking"}];
+let employees = load(K.emps, DEFAULT_EMPLOYEES);
+const norm = s => s.trim().toLowerCase().replace(/\s+/g,' ');
+const empExists = n => employees.some(e => norm(e.name) === norm(n));
+const vesselExists = n => vessels.some(v => norm(v) === norm(n));
+
+let selectedReason = null;
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = d => { const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function nextColor(){ const c=['#b56a12','#12649b','#5f7a0d','#9b1264','#0d6a7a']; return c[reasons.length % c.length]; }
+
+/* ---------- tabs ---------- */
+function showTab(t){
+  ['log','report','settings'].forEach(x=>{
+    $('view-'+x).classList.toggle('hidden', x!==t);
+    $('tab-'+x).classList.toggle('active', x===t);
+  });
+  if(t==='report') renderReport();
+}
+
+/* ---------- render pickers ---------- */
+function renderReasonButtons(){
+  $('reasonGrid').innerHTML = reasons.map(r =>
+    `<button type="button" class="reason-btn ${selectedReason===r.id?'selected':''}" style="color:${r.color}" onclick="pickReason('${r.id}')">
+      <span class="code" style="background:${r.color}">${esc(r.id)}</span>${esc(r.name)}</button>`).join('');
+}
+function pickReason(id){
+  selectedReason = id;
+  const r = reasons.find(x=>x.id===id);
+  $('vesselBox').classList.toggle('hidden', !(r && r.vessel));
+  renderReasonButtons();
+}
+function renderDeptSelect(){
+  $('empDept').innerHTML = depts.map(d=>`<option>${esc(d)}</option>`).join('');
+}
+function renderVesselSelect(){
+  $('vesselSel').innerHTML = vessels.length
+    ? vessels.map(v=>`<option>${esc(v)}</option>`).join('')
+    : `<option value="">— add vessels in Settings —</option>`;
+}
+function renderEmpSelect(){
+  const opts = [...employees].sort((a,b)=>a.name.localeCompare(b.name))
+    .map(e=>`<option value="${esc(e.name)}">${esc(e.name)} — ${esc(e.dept||'')}</option>`).join('');
+  $('empSel').innerHTML = `<option value="">— select employee —</option>` + opts + `<option value="__new__">➕ Add new employee…</option>`;
+}
+function empPicked(){
+  const v = $('empSel').value;
+  $('newEmpBox').classList.toggle('hidden', v !== '__new__');
+  if(v && v !== '__new__'){
+    const e = employees.find(x=>x.name===v);
+    if(e && e.dept) $('empDept').value = e.dept;
+  }
+}
+
+/* ---------- entries ---------- */
+function saveEntry(){
+  const sel = $('empSel').value;
+  let name = sel === '__new__' ? $('empName').value.trim() : sel;
+  const dept = $('empDept').value;
+  const from = $('dateFrom').value;
+  const to = $('dateTo').value || from;
+  if(!name) return toast('Select or enter the employee name');
+  if(!from) return toast('Pick a From date');
+  if(!selectedReason) return toast('Pick a reason');
+  if(to < from) return toast('To date is before From date');
+  if(sel === '__new__'){
+    if(empExists(name)){
+      const ex = employees.find(e=>norm(e.name)===norm(name));
+      toast('Duplicate: "'+ex.name+'" already exists — using existing record');
+      name = ex.name;
+    } else {
+      employees.push({name, dept}); save(K.emps, employees);
+      renderEmpSelect(); renderSettings();
+    }
+  }
+  const r = reasons.find(x=>x.id===selectedReason);
+  const vessel = (r && r.vessel) ? $('vesselSel').value : '';
+  if(r && r.vessel && !vessel) return toast('Pick a vessel (add one in Settings)');
+  const overlap = entries.find(e => norm(e.name)===norm(name) && e.from <= to && e.to >= from);
+  if(overlap && !confirm('Possible duplicate: '+name+' already has an entry '+fmt(overlap.from)+(overlap.to!==overlap.from?' – '+fmt(overlap.to):'')+' ('+reasonOf(overlap).name+'). Save anyway?')) return;
+  entries.push({id:Date.now(), name, dept, from, to, reason:selectedReason, vessel, note:$('entryNote').value.trim()});
+  save(K.entries, entries);
+  $('empSel').value=''; $('empName').value=''; $('newEmpBox').classList.add('hidden');
+  $('entryNote').value=''; $('dateFrom').value=''; $('dateTo').value='';
+  selectedReason=null; $('vesselBox').classList.add('hidden');
+  renderReasonButtons(); renderRecent();
+  toast('Saved ✔');
+}
+function delEntry(id){
+  entries = entries.filter(e=>e.id!==id);
+  save(K.entries, entries); renderRecent(); renderReport();
+}
+function reasonOf(e){ return reasons.find(r=>r.id===e.reason) || {id:e.reason,name:e.reason,color:'#5b6f7d'}; }
+function renderRecent(){
+  const last = [...entries].sort((a,b)=>b.id-a.id).slice(0,15);
+  $('recentList').innerHTML = last.length ? `<table><tr><th>Name</th><th>Dept</th><th>Dates</th><th>Reason</th><th></th></tr>` +
+    last.map(e=>{ const r=reasonOf(e);
+      return `<tr><td><strong>${esc(e.name)}</strong></td><td>${esc(e.dept)}</td>
+      <td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td>
+      <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}${e.vessel?' · '+esc(e.vessel):''}</td>
+      <td><button class="del" onclick="delEntry(${e.id})" title="Delete">✕</button></td></tr>`;}).join('') + `</table>`
+    : 'No entries yet.';
+}
+
+/* ---------- weekly report ---------- */
+function weekBounds(dateStr){
+  const d = new Date(dateStr+'T12:00:00');
+  const day = (d.getDay()+6)%7; // Mon=0
+  const mon = new Date(d); mon.setDate(d.getDate()-day);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const iso = x => x.toISOString().slice(0,10);
+  return [iso(mon), iso(sun)];
+}
+function entriesInWeek(ws, we){
+  return entries.filter(e => e.from <= we && e.to >= ws);
+}
+function renderReport(){
+  const wd = $('weekDate').value || new Date().toISOString().slice(0,10);
+  $('weekDate').value = wd;
+  const [ws, we] = weekBounds(wd);
+  const list = entriesInWeek(ws, we);
+  let html = `<h2>Weekly Movement Report</h2><p class="muted">Week ${fmt(ws)} – ${fmt(we)} · Generated ${new Date().toLocaleDateString('en-GB')}</p>`;
+  if(!list.length){ $('reportOut').innerHTML = html + '<p class="muted">No absences recorded this week.</p>'; return; }
+  const byDept = {};
+  list.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
+  Object.keys(byDept).sort().forEach(d=>{
+    html += `<div class="dept-head">${esc(d)}</div><table><tr><th>Name</th><th>Dates</th><th>Reason</th><th>Vessel</th><th>Note</th></tr>`;
+    byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
+      html += `<tr><td><strong>${esc(e.name)}</strong></td>
+      <td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td>
+      <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}</td>
+      <td>${esc(e.vessel||'—')}</td><td>${esc(e.note||'')}</td></tr>`;
+    });
+    html += `</table>`;
+  });
+  $('reportOut').innerHTML = html;
+}
+function copyReport(){
+  const wd = $('weekDate').value || new Date().toISOString().slice(0,10);
+  const [ws, we] = weekBounds(wd);
+  const list = entriesInWeek(ws, we);
+  let txt = `EST MOVEMENT SHEET — WEEKLY REPORT\nWeek: ${fmt(ws)} – ${fmt(we)}\n`;
+  if(!list.length){ txt += '\nNo absences recorded this week.\n'; }
+  else {
+    const byDept = {};
+    list.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
+    Object.keys(byDept).sort().forEach(d=>{
+      txt += `\n--- ${d.toUpperCase()} ---\n`;
+      byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
+        txt += `• ${e.name} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${r.name}${e.vessel?' ('+e.vessel+')':''}${e.note?' | '+e.note:''}\n`;
+      });
+    });
+  }
+  navigator.clipboard.writeText(txt).then(()=>toast('Report copied — paste into your email'));
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $('empListSettings').innerHTML = employees.length ? [...employees].sort((a,b)=>a.name.localeCompare(b.name)).map((e)=>{
+    const i = employees.indexOf(e);
+    return `<div class="list-item"><span><strong>${esc(e.name)}</strong> <span class="muted">· ${esc(e.dept||'no department')}</span></span>
+     <button class="del" onclick="delEmployee(${i})">✕</button></div>`;}).join('')
+    : '<p class="muted">No employees yet — add them below or paste a list.</p>';
+  $('newEmpDept').innerHTML = depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  $('reasonList').innerHTML = reasons.map((r,i)=>
+    `<div class="list-item"><span><span class="tag" style="background:${r.color}">${esc(r.id)}</span>
+     <input type="text" value="${esc(r.name)}" style="width:auto;display:inline-block;padding:8px;font-size:15px;margin-left:8px" onchange="renameReason(${i},this.value)">
+     ${r.vessel?'<span class="muted"> (requires vessel)</span>':''}</span>
+     <button class="del" onclick="delReason(${i})">✕</button></div>`).join('');
+  $('vesselList').innerHTML = vessels.length ? vessels.map((v,i)=>
+    `<div class="list-item"><input type="text" value="${esc(v)}" style="width:auto;flex:1;padding:8px;font-size:15px" onchange="renameVessel(${i},this.value)">
+     <button class="del" onclick="delVessel(${i})">✕</button></div>`).join('') : '<p class="muted">No vessels yet — add your fleet below.</p>';
+  $('deptList').innerHTML = depts.map((d,i)=>
+    `<div class="list-item"><span>${esc(d)}</span><button class="del" onclick="delDept(${i})">✕</button></div>`).join('');
+}
+function addReason(){
+  const n = $('newReason').value.trim(); if(!n) return;
+  const id = n.split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,3);
+  reasons.push({id, name:n, color:nextColor(), vessel:$('newReasonVessel').checked});
+  save(K.reasons, reasons); $('newReason').value=''; $('newReasonVessel').checked=false;
+  renderSettings(); renderReasonButtons();
+}
+function renameReason(i,v){ if(!v.trim())return; reasons[i].name=v.trim(); save(K.reasons,reasons); renderReasonButtons(); }
+function delReason(i){ if(!confirm('Remove reason "'+reasons[i].name+'"? Existing entries keep their code.'))return; reasons.splice(i,1); save(K.reasons,reasons); renderSettings(); renderReasonButtons(); }
+function addEmployee(){
+  const n = $('newEmpName').value.trim(); if(!n) return;
+  if(empExists(n)) return toast('Duplicate — "'+n+'" is already in the list');
+  employees.push({name:n, dept:$('newEmpDept').value});
+  save(K.emps, employees); $('newEmpName').value='';
+  renderSettings(); renderEmpSelect(); toast('Employee added ✔');
+}
+function bulkAddEmployees(){
+  const lines = $('bulkEmps').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return;
+  let added = 0, dupes = [];
+  lines.forEach(l=>{
+    const [n, d] = l.split(',').map(x=>x ? x.trim() : '');
+    if(!n) return;
+    if(empExists(n)) { dupes.push(n); return; }
+    employees.push({name:n, dept: d && depts.includes(d) ? d : (d || depts[0])});
+    if(d && !depts.includes(d) && d.length){ depts.push(d); save(K.depts, depts); }
+    added++;
+  });
+  save(K.emps, employees); $('bulkEmps').value='';
+  renderSettings(); renderEmpSelect(); renderDeptSelect();
+  toast(added+' added'+(dupes.length?' · '+dupes.length+' duplicates skipped: '+dupes.join(', '):''));
+}
+function delEmployee(i){
+  if(!confirm('Remove "'+employees[i].name+'" from the employee list? Past entries are kept.'))return;
+  employees.splice(i,1); save(K.emps, employees); renderSettings(); renderEmpSelect();
+}
+function addVessel(){ const v=$('newVessel').value.trim(); if(!v)return; if(vesselExists(v)) return toast('Duplicate — vessel "'+v+'" already exists'); vessels.push(v); save(K.vessels,vessels); $('newVessel').value=''; renderSettings(); renderVesselSelect(); }
+function renameVessel(i,v){ if(!v.trim())return; vessels[i]=v.trim(); save(K.vessels,vessels); renderVesselSelect(); }
+function delVessel(i){ vessels.splice(i,1); save(K.vessels,vessels); renderSettings(); renderVesselSelect(); }
+function addDept(){ const d=$('newDept').value.trim(); if(!d)return; depts.push(d); save(K.depts,depts); $('newDept').value=''; renderSettings(); renderDeptSelect(); }
+function delDept(i){ if(!confirm('Remove department "'+depts[i]+'"?'))return; depts.splice(i,1); save(K.depts,depts); renderSettings(); renderDeptSelect(); }
+
+/* ---------- export / import ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify({entries,reasons,vessels,depts,employees},null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'est-movement-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+function importData(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try {
+    const d = JSON.parse(r.result);
+    if(d.entries) entries=d.entries; if(d.reasons) reasons=d.reasons;
+    if(d.vessels) vessels=d.vessels; if(d.depts) depts=d.depts; if(d.employees) employees=d.employees;
+    save(K.entries,entries); save(K.reasons,reasons); save(K.vessels,vessels); save(K.depts,depts); save(K.emps,employees);
+    initRender(); toast('Backup imported ✔');
+  } catch { toast('Could not read that file'); } };
+  r.readAsText(f);
+}
+function clearAll(){
+  if(!confirm('Delete ALL absence entries? Settings are kept. This cannot be undone.'))return;
+  entries=[]; save(K.entries,entries); renderRecent(); renderReport(); toast('All entries deleted');
+}
+
+/* ---------- init ---------- */
+function initRender(){
+  renderReasonButtons(); renderDeptSelect(); renderVesselSelect();
+  renderEmpSelect(); renderRecent(); renderSettings();
+}
+initRender();
+</script>
+</body>
+</html>
