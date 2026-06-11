@@ -85,8 +85,10 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 </header>
 <nav><div class="tabs">
   <button id="tab-log" class="active" onclick="showTab('log')">Log Absence</button>
+  <button id="tab-weekend" onclick="showTab('weekend')">Weekend Duty</button>
   <button id="tab-report" onclick="showTab('report')">Weekly Report</button>
   <button id="tab-planner" onclick="showTab('planner')">Planner</button>
+  <button id="tab-rules" onclick="showTab('rules')">Rules</button>
   <button id="tab-settings" onclick="showTab('settings')">Settings</button>
 </div></nav>
 <main>
@@ -140,6 +142,32 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
   </div>
 </section>
 
+<!-- ============ WEEKEND DUTY TAB ============ -->
+<section id="view-weekend" class="hidden">
+  <div class="card">
+    <h2>Weekend / Holiday Duty</h2>
+    <div class="row">
+      <div><label for="wsEmp">Employee on duty</label><select id="wsEmp" onchange="wsEmpPicked()"></select></div>
+      <div><label for="wsDept">Department</label><select id="wsDept"></select></div>
+    </div>
+    <label>Pick the date(s) — tap to select, tap again to unselect. Blue = Saturday, dark blue = Sunday, orange = public holiday.</label>
+    <div class="reason-grid" id="wsQuick"></div>
+    <p class="muted" id="wsSelInfo"></p>
+    <label>Or type the dates yourself (From – To)</label>
+    <div class="row">
+      <div><label for="wsFrom">From</label><input type="date" id="wsFrom"></div>
+      <div><label for="wsTo">To</label><input type="date" id="wsTo"></div>
+    </div>
+    <label for="wsSwap">Swapped with (optional)</label>
+    <select id="wsSwap"></select>
+    <button class="big-btn" onclick="saveShift()">Save Weekend Duty</button>
+  </div>
+  <div class="card">
+    <h2>Upcoming Duty</h2>
+    <div id="wsList" class="muted">Nothing scheduled.</div>
+  </div>
+</section>
+
 <!-- ============ REPORT TAB ============ -->
 <section id="view-report" class="hidden">
   <div class="card no-print">
@@ -181,6 +209,32 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     <p class="muted">Colours = absence reason. Orange columns = public holidays, grey = weekends. The "Weekend shift" row shows who is on duty (→ means swapped).</p>
   </div>
   <div class="card" id="plannerOut" style="overflow-x:auto"></div>
+</section>
+
+<!-- ============ RULES TAB ============ -->
+<section id="view-rules" class="hidden">
+  <div class="card">
+    <h2>Reason Codes</h2>
+    <div id="rulesCodes"></div>
+  </div>
+  <div class="card">
+    <h2>How It Works</h2>
+    <div class="list-item"><span><strong>Weekly report</strong> — a consolidated list of your department's absentees goes to Mr. Sarris and Ms. Kyskira by email every <strong>Friday by 17:00</strong>, with names, exact dates of absence, and the reason.</span></div>
+    <div class="list-item"><span><strong>Weekend duty</strong> — allowed only on Saturdays, Sundays and public holidays. "Swapped with" records who actually covered the shift if it was exchanged (shown as → in the Planner).</span></div>
+    <div class="list-item"><span><strong>Vessel attendance</strong> — always requires the vessel name.</span></div>
+    <div class="list-item"><span><strong>Public holidays</strong> — calculated automatically for any year, including Orthodox Easter. Extra company dates can be added in Settings.</span></div>
+    <div class="list-item"><span><strong>Duplicates</strong> — duplicate employees, vessels and overlapping entries are flagged automatically before saving.</span></div>
+    <div class="list-item"><span><strong>Data</strong> — entries are saved in this browser only. Export a backup (Settings → Data) at least weekly.</span></div>
+  </div>
+  <div class="card">
+    <h2>Company Rules</h2>
+    <p class="muted">Add your own rules here — they are saved and shown on this page.</p>
+    <div id="customRulesList"></div>
+    <div class="add-row">
+      <input type="text" id="newRule" placeholder="Write a rule, e.g. Max 2 people on leave per department">
+      <button class="btn solid" onclick="addRule()">Add</button>
+    </div>
+  </div>
 </section>
 
 <!-- ============ SETTINGS TAB ============ -->
@@ -240,6 +294,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
   <div class="card">
     <h2>Data</h2>
     <div class="btn-row">
+      <button class="btn solid" onclick="downloadSite()">Download this website (index.html)</button>
       <button class="btn solid" onclick="exportData()">Export backup (JSON)</button>
       <button class="btn" onclick="loadBuiltIn()">Load built-in data (Excel + demo)</button>
       <button class="btn" onclick="document.getElementById('importFile').click()">Import backup</button>
@@ -254,7 +309,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 
 <script>
 /* ---------- storage ---------- */
-const K = {entries:'est_entries', reasons:'est_reasons', vessels:'est_vessels', depts:'est_depts', emps:'est_employees', hols:'est_customhols'};
+const K = {entries:'est_entries', reasons:'est_reasons', vessels:'est_vessels', depts:'est_depts', emps:'est_employees', hols:'est_customhols', rules:'est_rules'};
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
@@ -276,6 +331,7 @@ const norm = s => s.trim().toLowerCase().replace(/\s+/g,' ');
 const empExists = n => employees.some(e => norm(e.name) === norm(n));
 const vesselExists = n => vessels.some(v => norm(v) === norm(n));
 let customHols = load(K.hols, []); // [{date:'YYYY-MM-DD', name}]
+let customRules = load(K.rules, []);
 if(!reasons.some(r=>r.id==='WS')){ reasons.push({id:'WS', name:'Weekend Shift', color:'#a36b00', vessel:false, shift:true}); }
 
 let selectedReason = null;
@@ -289,17 +345,19 @@ function nextColor(){ const c=['#b56a12','#12649b','#5f7a0d','#9b1264','#0d6a7a'
 
 /* ---------- tabs ---------- */
 function showTab(t){
-  ['log','report','planner','settings'].forEach(x=>{
+  ['log','weekend','report','planner','rules','settings'].forEach(x=>{
     $('view-'+x).classList.toggle('hidden', x!==t);
     $('tab-'+x).classList.toggle('active', x===t);
   });
   if(t==='report') renderReport();
   if(t==='planner') renderPlanner();
+  if(t==='weekend'){ renderWsQuick(); renderWsList(); }
+  if(t==='rules') renderRules();
 }
 
 /* ---------- render pickers ---------- */
 function renderReasonButtons(){
-  $('reasonGrid').innerHTML = reasons.map(r =>
+  $('reasonGrid').innerHTML = reasons.filter(r=>!r.shift).map(r =>
     `<button type="button" class="reason-btn ${selectedReason===r.id?'selected':''}" style="color:${r.color}" onclick="pickReason('${r.id}')">
       <span class="code" style="background:${r.color}">${esc(r.id)}</span>${esc(r.name)}</button>`).join('');
 }
@@ -629,115 +687,72 @@ function weekGridHTML(ws, list){
   return h;
 }
 
-/* ---------- settings ---------- */
-function renderSettings(){
-  $('empListSettings').innerHTML = employees.length ? [...employees].sort((a,b)=>a.name.localeCompare(b.name)).map((e)=>{
-    const i = employees.indexOf(e);
-    return `<div class="list-item"><span><strong>${esc(e.name)}</strong> <span class="muted">· ${esc(e.dept||'no department')}</span></span>
-     <button class="del" onclick="delEmployee(${i})">✕</button></div>`;}).join('')
-    : '<p class="muted">No employees yet — add them below or paste a list.</p>';
-  $('newEmpDept').innerHTML = depts.map(d=>`<option>${esc(d)}</option>`).join('');
-  const hy = parseInt($('holYear').value) || new Date().getFullYear();
-  $('holYear').value = hy;
-  const hm = holidayMap(hy);
-  $('holidayList').innerHTML = Object.keys(hm).sort().map(d=>{
-    const ci = customHols.findIndex(h=>h.date===d);
-    return `<div class="list-item"><span>${fmt(d)} — ${esc(hm[d])}</span>${ci>-1?`<button class="del" onclick="delHoliday(${ci})">✕</button>`:`<span class="muted">auto</span>`}</div>`;
+/* ---------- weekend duty tab ---------- */
+function isEligibleDuty(iso){
+  const dow = new Date(iso+'T12:00:00').getDay();
+  return dow===0 || dow===6 || !!holidayMap(+iso.slice(0,4))[iso];
+}
+function renderWsSelects(){
+  const opts = [...employees].sort((a,b)=>a.name.localeCompare(b.name)).map(e=>`<option value="${esc(e.name)}">${esc(e.name)} — ${esc(e.dept||'')}</option>`).join('');
+  $('wsEmp').innerHTML = `<option value="">— select employee —</option>` + opts;
+  $('wsDept').innerHTML = depts.map(d=>`<option${d==='Technical'?' selected':''}>${esc(d)}</option>`).join('');
+  $('wsSwap').innerHTML = `<option value="">— no swap —</option>` + [...employees].sort((a,b)=>a.name.localeCompare(b.name)).map(e=>`<option>${esc(e.name)}</option>`).join('');
+}
+function wsEmpPicked(){
+  const e = employees.find(x=>x.name===$('wsEmp').value);
+  if(e && e.dept) $('wsDept').value = e.dept;
+}
+let wsSelected = [];
+function renderWsQuick(){
+  const out=[]; const now=new Date();
+  const todayIso=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12).toISOString().slice(0,10);
+  for(let i=0;i<90 && out.length<10;i++){
+    const iso=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12).toISOString().slice(0,10);
+    if(isEligibleDuty(iso)){
+      const dow=new Date(iso+'T12:00:00').getDay();
+      const hol=holidayMap(+iso.slice(0,4))[iso];
+      out.push({iso, hol, dow});
+    }
+  }
+  $('wsQuick').innerHTML = out.map((o,idx)=>{
+    const col = o.hol ? '#c46a00' : (o.dow===6 ? '#1273b5' : '#0e4d75');
+    const sel = wsSelected.includes(o.iso);
+    const badge = o.iso===todayIso ? 'TODAY' : (idx===0 ? 'NEXT' : '');
+    return `<button type="button" class="reason-btn ${sel?'selected':''}" style="${sel?`background:${col};border-color:${col};color:#fff`:`color:${col}`}" onclick="wsToggle('${o.iso}')">
+      ${badge?`<span class="code" style="background:${sel?'#ffffff44':col}">${badge}</span>`:''}
+      <span style="font-size:15px">${fmt(o.iso).slice(0,5)}</span>${esc(o.hol || (o.dow===6?'Saturday':'Sunday'))}</button>`;
   }).join('');
-  $('reasonList').innerHTML = reasons.map((r,i)=>
-    `<div class="list-item"><span><span class="tag" style="background:${r.color}">${esc(r.id)}</span>
-     <input type="text" value="${esc(r.name)}" style="width:auto;display:inline-block;padding:8px;font-size:15px;margin-left:8px" onchange="renameReason(${i},this.value)">
-     ${r.vessel?'<span class="muted"> (requires vessel)</span>':''}</span>
-     <button class="del" onclick="delReason(${i})">✕</button></div>`).join('');
-  $('vesselList').innerHTML = vessels.length ? vessels.map((v,i)=>
-    `<div class="list-item"><input type="text" value="${esc(v)}" style="width:auto;flex:1;padding:8px;font-size:15px" onchange="renameVessel(${i},this.value)">
-     <button class="del" onclick="delVessel(${i})">✕</button></div>`).join('') : '<p class="muted">No vessels yet — add your fleet below.</p>';
-  $('deptList').innerHTML = depts.map((d,i)=>
-    `<div class="list-item"><span>${esc(d)}</span><button class="del" onclick="delDept(${i})">✕</button></div>`).join('');
+  $('wsSelInfo').textContent = wsSelected.length ? 'Selected: ' + [...wsSelected].sort().map(d=>fmt(d).slice(0,5)).join(', ') : '';
 }
-function addReason(){
-  const n = $('newReason').value.trim(); if(!n) return;
-  const id = n.split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,3);
-  reasons.push({id, name:n, color:nextColor(), vessel:$('newReasonVessel').checked});
-  save(K.reasons, reasons); $('newReason').value=''; $('newReasonVessel').checked=false;
-  renderSettings(); renderReasonButtons();
+function wsToggle(iso){
+  const i=wsSelected.indexOf(iso);
+  if(i>-1) wsSelected.splice(i,1); else wsSelected.push(iso);
+  renderWsQuick();
 }
-function renameReason(i,v){ if(!v.trim())return; reasons[i].name=v.trim(); save(K.reasons,reasons); renderReasonButtons(); }
-function delReason(i){ if(!confirm('Remove reason "'+reasons[i].name+'"? Existing entries keep their code.'))return; reasons.splice(i,1); save(K.reasons,reasons); renderSettings(); renderReasonButtons(); }
-function addEmployee(){
-  const n = $('newEmpName').value.trim(); if(!n) return;
-  if(empExists(n)) return toast('Duplicate — "'+n+'" is already in the list');
-  employees.push({name:n, dept:$('newEmpDept').value});
-  save(K.emps, employees); $('newEmpName').value='';
-  renderSettings(); renderEmpSelect(); toast('Employee added ✔');
-}
-function bulkAddEmployees(){
-  const lines = $('bulkEmps').value.split('\n').map(l=>l.trim()).filter(Boolean);
-  if(!lines.length) return;
-  let added = 0, dupes = [];
-  lines.forEach(l=>{
-    const [n, d] = l.split(',').map(x=>x ? x.trim() : '');
-    if(!n) return;
-    if(empExists(n)) { dupes.push(n); return; }
-    employees.push({name:n, dept: d && depts.includes(d) ? d : (d || depts[0])});
-    if(d && !depts.includes(d) && d.length){ depts.push(d); save(K.depts, depts); }
-    added++;
-  });
-  save(K.emps, employees); $('bulkEmps').value='';
-  renderSettings(); renderEmpSelect(); renderDeptSelect();
-  toast(added+' added'+(dupes.length?' · '+dupes.length+' duplicates skipped: '+dupes.join(', '):''));
-}
-function delEmployee(i){
-  if(!confirm('Remove "'+employees[i].name+'" from the employee list? Past entries are kept.'))return;
-  employees.splice(i,1); save(K.emps, employees); renderSettings(); renderEmpSelect();
-}
-function addVessel(){ const v=$('newVessel').value.trim(); if(!v)return; if(vesselExists(v)) return toast('Duplicate — vessel "'+v+'" already exists'); vessels.push(v); save(K.vessels,vessels); $('newVessel').value=''; renderSettings(); renderVesselSelect(); }
-function renameVessel(i,v){ if(!v.trim())return; vessels[i]=v.trim(); save(K.vessels,vessels); renderVesselSelect(); }
-function delVessel(i){ vessels.splice(i,1); save(K.vessels,vessels); renderSettings(); renderVesselSelect(); }
-function addDept(){ const d=$('newDept').value.trim(); if(!d)return; depts.push(d); save(K.depts,depts); $('newDept').value=''; renderSettings(); renderDeptSelect(); }
-function delDept(i){ if(!confirm('Remove department "'+depts[i]+'"?'))return; depts.splice(i,1); save(K.depts,depts); renderSettings(); renderDeptSelect(); }
-
-/* ---------- export / import ---------- */
-function exportData(){
-  const blob = new Blob([JSON.stringify({entries,reasons,vessels,depts,employees,customHols},null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'est-movement-backup-'+new Date().toISOString().slice(0,10)+'.json';
-  a.click();
-}
-function importData(ev){
-  const f = ev.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = () => { try {
-    const d = JSON.parse(r.result);
-    if(d.entries) entries=d.entries; if(d.reasons) reasons=d.reasons;
-    if(d.vessels) vessels=d.vessels; if(d.depts) depts=d.depts; if(d.employees) employees=d.employees; if(d.customHols) customHols=d.customHols;
-    save(K.entries,entries); save(K.reasons,reasons); save(K.vessels,vessels); save(K.depts,depts); save(K.emps,employees); save(K.hols,customHols);
-    initRender(); toast('Backup imported ✔');
-  } catch { toast('Could not read that file'); } };
-  r.readAsText(f);
-}
-function loadBuiltIn(){
-  const mine = entries.filter(e => !DEFAULT_ENTRIES.some(d => d.id === e.id));
-  entries = DEFAULT_ENTRIES.concat(mine);
-  save(K.entries, entries);
-  renderRecent(); renderEmpSelect();
-  toast('Built-in data loaded — ' + entries.length + ' entries (your own entries were kept)');
-}
-function clearAll(){
-  if(!confirm('Delete ALL absence entries? Settings are kept. This cannot be undone.'))return;
-  entries=[]; save(K.entries,entries); renderRecent(); renderReport(); toast('All entries deleted');
-}
-
-/* ---------- init ---------- */
-function initRender(){
-  renderReasonButtons(); renderDeptSelect(); renderVesselSelect();
-  $('plannerDept').innerHTML = depts.map(d=>`<option${d==='Technical'?' selected':''}>${esc(d)}</option>`).join('');
-  $('reportDept').innerHTML = `<option value="__all__">All departments</option>` + depts.map(d=>`<option>${esc(d)}</option>`).join('');
-  if(!$('plannerMonth').value) $('plannerMonth').value = new Date().toISOString().slice(0,7);
-  renderEmpSelect(); renderRecent(); renderSettings();
-}
-initRender();
-</script>
-</body>
-</html>
+function saveShift(){
+  const name=$('wsEmp').value, dept=$('wsDept').value;
+  if(!name) return toast('Select the employee on duty');
+  const ds=[...wsSelected];
+  const tf=$('wsFrom').value, tt=$('wsTo').value || tf;
+  if(tf){
+    if(tt < tf) return toast('To date is before From date');
+    for(let x=new Date(tf+'T12:00:00'); ; x.setDate(x.getDate()+1)){
+      const iso=x.toISOString().slice(0,10);
+      if(iso>tt) break;
+      if(!ds.includes(iso)) ds.push(iso);
+    }
+  }
+  if(!ds.length) return toast('Tap a date button or type From/To dates');
+  ds.sort();
+  const bad=ds.find(iso=>!isEligibleDuty(iso));
+  if(bad && !confirm(fmt(bad)+' is not a weekend or public holiday. Save anyway?')) return;
+  const groups=[]; let s=ds[0], p=ds[0];
+  for(let i=1;i<=ds.length;i++){
+    const cur=ds[i];
+    if(cur && (new Date(cur+'T12:00:00')-new Date(p+'T12:00:00'))===86400000){ p=cur; continue; }
+    groups.push([s,p]); s=p=cur;
+  }
+  for(const g of groups){
+    const overlap=entries.find(e=>isShift(e) && e.dept===dept && e.from<=g[1] && e.to>=g[0]);
+    if(overlap && !confirm('Duplicate? '+overlap.name+' is already on duty '+fmt(overlap.from)+(overlap.to!==overlap.from?' – '+fmt(overlap.to):'')+' for '+dept+'. Save this one anyway?')) continue;
+    entries.push({
