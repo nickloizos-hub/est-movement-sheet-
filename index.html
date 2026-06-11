@@ -223,6 +223,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     <div class="list-item"><span><strong>Weekend duty</strong> — allowed only on Saturdays, Sundays and public holidays. "Swapped with" records who actually covered the shift if it was exchanged (shown as → in the Planner).</span></div>
     <div class="list-item"><span><strong>Vessel attendance</strong> — always requires the vessel name.</span></div>
     <div class="list-item"><span><strong>Public holidays</strong> — calculated automatically for any year, including Orthodox Easter. Extra company dates can be added in Settings.</span></div>
+    <div class="list-item"><span><strong>Counting</strong> — absence days are counted on working days only; weekends and public holidays never count as leave. Vessel attendance and weekend duty are WORKING time, counted on any day including weekends.</span></div>
     <div class="list-item"><span><strong>Duplicates</strong> — duplicate employees, vessels and overlapping entries are flagged automatically before saving.</span></div>
     <div class="list-item"><span><strong>Data</strong> — entries are saved in this browser only. Export a backup (Settings → Data) at least weekly.</span></div>
   </div>
@@ -260,6 +261,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     <div class="add-row">
       <input type="text" id="newReason" placeholder="New reason name">
       <label style="display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap"><input type="checkbox" id="newReasonVessel" style="width:auto"> vessel?</label>
+      <label style="display:flex;align-items:center;gap:6px;margin:0;white-space:nowrap"><input type="checkbox" id="newReasonWork" style="width:auto"> working?</label>
       <button class="btn solid" onclick="addReason()">Add</button>
     </div>
   </div>
@@ -318,7 +320,7 @@ let entries = load(K.entries, DEFAULT_ENTRIES);
 let reasons = load(K.reasons, [
   {id:'H',  name:'Holiday',           color:'#1273b5', vessel:false},
   {id:'M',  name:'Medical',           color:'#c0392b', vessel:false},
-  {id:'VA', name:'Vessel Attendance', color:'#0d7a5f', vessel:true},
+  {id:'VA', name:'Vessel Attendance', color:'#0d7a5f', vessel:true, work:true},
   {id:'U',  name:'Unplanned Absence', color:'#7a4ea3', vessel:false}
 ]);
 const DEFAULT_VESSELS = ["ALORA", "CITIUS", "COLOSSUS", "CONSTANTIA (ex GOTIA)", "DIVINUS", "ENERGY ACHILLES", "ENERGY AFRODITE", "ENERGY APOLLO", "ENERGY ARIADNE", "ENERGY ARTEMIS", "ENERGY ATHENA", "ENERGY CENTAUR", "ENERGY DELOS", "ENERGY DIONE", "ENERGY TRIUMPH", "FURIOUS", "GLADIATOR", "GOOD HOPE MAX", "IMPERIUS", "JAGUAR MAX", "LIVORNO", "MAGIC STRIKER", "PANTHER MAX", "PUMA MAX", "TAURUS", "VIRTUOUS STRIKER", "WARRIOR"];
@@ -333,6 +335,7 @@ const vesselExists = n => vessels.some(v => norm(v) === norm(n));
 let customHols = load(K.hols, []); // [{date:'YYYY-MM-DD', name}]
 let customRules = load(K.rules, []);
 if(!reasons.some(r=>r.id==='WS')){ reasons.push({id:'WS', name:'Weekend Shift', color:'#a36b00', vessel:false, shift:true}); }
+reasons.forEach(r=>{ if(r.id==='VA' && r.work===undefined) r.work=true; });
 
 let selectedReason = null;
 
@@ -465,20 +468,29 @@ function renderReport(){
   if(hols.length) html += `<p class="muted">Public holidays this week: ${hols.map(h=>fmt(h.date)+' '+esc(h.name)).join(' · ')}</p>`;
   if(($('reportFmt').value||'existing')==='grid'){ $('reportOut').innerHTML = html + weekGridHTML(ws, list); return; }
   const shifts = list.filter(isShift);
-  const abs = list.filter(e=>!isShift(e));
-  if(!abs.length && !shifts.length){ $('reportOut').innerHTML = html + '<p class="muted">No absences recorded this week.</p>'; return; }
+  const offsite = list.filter(e=>isWork(e) && !isShift(e));
+  const abs = list.filter(isAbsence);
+  if(!abs.length && !shifts.length && !offsite.length){ $('reportOut').innerHTML = html + '<p class="muted">Nothing recorded this week.</p>'; return; }
   const byDept = {};
   abs.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
   Object.keys(byDept).sort().forEach(d=>{
-    html += `<div class="dept-head">${esc(d)}</div><table><tr><th>Name</th><th>Dates</th><th>Reason</th><th>Vessel</th><th>Note</th></tr>`;
+    html += `<div class="dept-head">Absent — ${esc(d)}</div><table><tr><th>Name</th><th>Dates</th><th>Days</th><th>Reason</th><th>Note</th></tr>`;
     byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
       html += `<tr><td><strong>${esc(e.name)}</strong></td>
       <td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td>
+      <td>${countDays(e, ws, we, true)}</td>
       <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}</td>
-      <td>${esc(e.vessel||'—')}</td><td>${esc(e.note||'')}</td></tr>`;
+      <td>${esc(e.note||'')}</td></tr>`;
     });
     html += `</table>`;
   });
+  if(offsite.length){
+    html += `<div class="dept-head">Working Off Site — Vessel Attendance</div><table><tr><th>Name</th><th>Vessel</th><th>Dates</th><th>Days</th><th>Department</th></tr>`;
+    offsite.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
+      html += `<tr><td><strong>${esc(e.name)}</strong></td><td>${esc(e.vessel||'—')}</td><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td>${countDays(e, ws, we, false)}</td><td>${esc(e.dept)}</td></tr>`;
+    });
+    html += `</table>`;
+  }
   if(shifts.length){
     html += `<div class="dept-head">Weekend Duty</div><table><tr><th>Name</th><th>Dates</th><th>Department</th><th>Swap</th></tr>`;
     shifts.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
@@ -497,17 +509,24 @@ function copyReport(){
   const hols = holidaysInRange(ws, we);
   if(hols.length) txt += 'Public holidays: ' + hols.map(h=>fmt(h.date)+' '+h.name).join(' · ') + '\n';
   const shifts = list.filter(isShift);
-  const abs = list.filter(e=>!isShift(e));
-  if(!abs.length && !shifts.length){ txt += '\nNo absences recorded this week.\n'; }
+  const offsite = list.filter(e=>isWork(e) && !isShift(e));
+  const abs = list.filter(isAbsence);
+  if(!abs.length && !shifts.length && !offsite.length){ txt += '\nNothing recorded this week.\n'; }
   else {
     const byDept = {};
     abs.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
     Object.keys(byDept).sort().forEach(d=>{
-      txt += `\n--- ${d.toUpperCase()} ---\n`;
+      txt += `\n--- ABSENT: ${d.toUpperCase()} ---\n`;
       byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
         txt += `• ${e.name} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${r.name}${e.vessel?' ('+e.vessel+')':''}${e.note?' | '+e.note:''}\n`;
       });
     });
+    if(offsite.length){
+      txt += `\n--- WORKING OFF SITE (VESSEL ATTENDANCE) ---\n`;
+      offsite.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
+        txt += `• ${e.name} | ${e.vessel||'—'} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${e.dept}\n`;
+      });
+    }
     if(shifts.length){
       txt += `\n--- WEEKEND DUTY ---\n`;
       shifts.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
@@ -570,6 +589,18 @@ function delHoliday(i){ customHols.splice(i,1); save(K.hols, customHols); render
 
 /* ---------- planner ---------- */
 const isShift = e => !!(reasonOf(e).shift);
+const isWork = e => { const r=reasonOf(e); return !!(r.work || r.shift); };
+const isAbsence = e => !isWork(e);
+function isWorkday(iso){ const dow=new Date(iso+'T12:00:00').getDay(); return dow!==0 && dow!==6 && !holidayMap(+iso.slice(0,4))[iso]; }
+function countDays(e, s, t, workdaysOnly){
+  let n=0; const a = e.from > s ? e.from : s, b = e.to < t ? e.to : t;
+  for(let x=new Date(a+'T12:00:00'); ; x.setDate(x.getDate()+1)){
+    const iso=x.toISOString().slice(0,10);
+    if(iso>b) break;
+    if(!workdaysOnly || isWorkday(iso)) n++;
+  }
+  return n;
+}
 function shortName(n){ const p=String(n).trim().split(/\s+/); return p[p.length-1].toUpperCase(); }
 function plannerStep(d){
   const v=$('plannerMonth').value || new Date().toISOString().slice(0,7);
@@ -601,7 +632,8 @@ function monthGridHTML(y,m,dept){
     h+=`<tr><td class="pname">${esc(emp.name)}</td>`;
     isos.forEach((iso,i)=>{
       const dow=new Date(y,m-1,i+1).getDay(), hol=hm[iso];
-      const ent=entries.find(e=>!isShift(e) && norm(e.name)===norm(emp.name) && e.from<=iso && e.to>=iso);
+      const mine = e=>norm(e.name)===norm(emp.name) && e.from<=iso && e.to>=iso;
+      const ent = (isWorkday(iso) ? entries.find(e=>mine(e) && isAbsence(e)) : null) || entries.find(e=>mine(e) && isWork(e) && !isShift(e));
       if(ent){ const r=reasonOf(ent);
         h+=`<td style="background:${r.color};color:#fff" title="${esc(emp.name)} — ${esc(r.name)}${ent.vessel?' ('+esc(ent.vessel)+')':''}">${esc(r.id)}</td>`;
       } else {
@@ -621,24 +653,25 @@ function monthListHTML(y,m,dept){
   const s = y+'-'+String(m).padStart(2,'0')+'-01';
   const t = y+'-'+String(m).padStart(2,'0')+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');
   const emps = employees.filter(e=>e.dept===dept).sort((a,b)=>a.name.localeCompare(b.name));
-  let h='', deptTotal=0, any=false;
+  let h='', deptTotal=0, deptWork=0, any=false;
   emps.forEach(emp=>{
     const list = entries.filter(e=>norm(e.name)===norm(emp.name) && e.from<=t && e.to>=s).sort((a,b)=>a.from<b.from?-1:1);
     if(!list.length) return;
     any=true;
-    let personDays=0;
+    let personDays=0, personWork=0;
     h+=`<div class="dept-head">${esc(emp.name)}</div><table><tr><th>Dates</th><th>Days (this month)</th><th>Reason</th><th>Details</th></tr>`;
     list.forEach(e=>{
-      const r=reasonOf(e), d=clipDays(e,s,t);
-      if(!isShift(e)){ personDays+=d; deptTotal+=d; }
+      const r=reasonOf(e);
+      const d = isAbsence(e) ? countDays(e,s,t,true) : countDays(e,s,t,false);
+      if(isAbsence(e)){ personDays+=d; deptTotal+=d; } else { personWork+=d; deptWork+=d; }
       h+=`<tr><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td>${d}</td>
       <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}</td>
       <td>${esc(e.vessel||'')}${e.swap?'⇄ '+esc(e.swap):''}${e.note?' · '+esc(e.note):''}</td></tr>`;
     });
-    h+=`</table><p class="muted">Absence days in month (excl. weekend shifts): <strong>${personDays}</strong></p>`;
+    h+=`</table><p class="muted">Absent: <strong>${personDays}</strong> working day(s) · Working off site / on duty: <strong>${personWork}</strong> day(s)</p>`;
   });
   if(!any) return '<p class="muted">Nothing recorded for this department this month.</p>';
-  return h + `<div class="dept-head">Department total</div><p><strong>${deptTotal}</strong> absence days this month (excl. weekend shifts).</p>`;
+  return h + `<div class="dept-head">Department total</div><p>Absent: <strong>${deptTotal}</strong> working day(s) · Working: <strong>${deptWork}</strong> day(s) this month.</p>`;
 }
 function renderPlanner(){
   if(!$('plannerMonth').value) $('plannerMonth').value=new Date().toISOString().slice(0,7);
@@ -670,20 +703,23 @@ function weekGridHTML(ws, list){
   let h='<table class="pl"><tr><th class="pname">Name</th><th>Department</th>';
   days.forEach((iso,i)=>{ const hol=hm[iso];
     h+=`<th class="${i>=5?'we':''} ${hol?'hol':''}" title="${hol?esc(hol):''}">${wd[i]}<br><span class="wd">${fmt(iso).slice(0,5)}</span></th>`; });
-  h+='<th>Total</th></tr>';
+  h+='<th>Absent</th><th>Working</th></tr>';
   people.forEach(p=>{
-    let tot=0;
+    let totA=0, totW=0;
     h+=`<tr><td class="pname">${esc(p.name)}</td><td style="text-align:left">${esc(p.dept)}</td>`;
     days.forEach((iso,i)=>{
-      const ent = list.find(e=>norm(e.name)===norm(p.name)&&e.from<=iso&&e.to>=iso&&!isShift(e))
-               || list.find(e=>norm(e.name)===norm(p.name)&&e.from<=iso&&e.to>=iso);
-      if(ent){ const r=reasonOf(ent); if(!isShift(ent)) tot++;
+      const mine = e=>norm(e.name)===norm(p.name)&&e.from<=iso&&e.to>=iso;
+      const absEnt = isWorkday(iso) ? list.find(e=>mine(e)&&isAbsence(e)) : null;
+      const workEnt = list.find(e=>mine(e)&&isWork(e));
+      const ent = absEnt || workEnt;
+      if(ent){ const r=reasonOf(ent);
+        if(absEnt) totA++; else totW++;
         h+=`<td style="background:${r.color};color:#fff" title="${esc(r.name)}${ent.vessel?' ('+esc(ent.vessel)+')':''}${ent.swap?' ⇄ '+esc(ent.swap):''}">${esc(r.id)}</td>`;
       } else { const hol=hm[iso]; h+=`<td class="${i>=5?'we':''} ${hol?'hol':''}"></td>`; }
     });
-    h+=`<td><strong>${tot}</strong></td></tr>`;
+    h+=`<td><strong>${totA}</strong></td><td><strong>${totW}</strong></td></tr>`;
   });
-  h+='</table><p class="muted" style="margin-top:8px">Key: '+reasons.map(r=>`<span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}`).join(' &nbsp;·&nbsp; ')+'</p>';
+  h+='</table><p class="muted" style="margin-top:8px">Absent counts working days only — weekends and public holidays never count as leave. Working (vessel attendance / weekend duty) counts every day. Key: '+reasons.map(r=>`<span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}`).join(' &nbsp;·&nbsp; ')+'</p>';
   return h;
 }
 
@@ -755,4 +791,154 @@ function saveShift(){
   for(const g of groups){
     const overlap=entries.find(e=>isShift(e) && e.dept===dept && e.from<=g[1] && e.to>=g[0]);
     if(overlap && !confirm('Duplicate? '+overlap.name+' is already on duty '+fmt(overlap.from)+(overlap.to!==overlap.from?' – '+fmt(overlap.to):'')+' for '+dept+'. Save this one anyway?')) continue;
-    entries.push({
+    entries.push({id:Date.now()+Math.floor(Math.random()*1000), name, dept, from:g[0], to:g[1], reason:'WS', vessel:'', swap:$('wsSwap').value, note:''});
+  }
+  save(K.entries, entries);
+  wsSelected=[]; $('wsEmp').value=''; $('wsSwap').value=''; $('wsFrom').value=''; $('wsTo').value='';
+  renderWsQuick(); renderWsList(); renderRecent();
+  toast('Weekend duty saved ✔');
+}
+function renderWsList(){
+  const today = new Date().toISOString().slice(0,10);
+  const list = entries.filter(e=>isShift(e) && e.to>=today).sort((a,b)=>a.from<b.from?-1:1).slice(0,20);
+  $('wsList').innerHTML = list.length ? `<table><tr><th>Dates</th><th>Name</th><th>Department</th><th>Swap</th><th></th></tr>`+
+    list.map(e=>`<tr><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td><strong>${esc(e.name)}</strong></td><td>${esc(e.dept)}</td><td>${e.swap?'→ '+esc(e.swap):'—'}</td>
+    <td><button class="del" onclick="delEntry(${e.id});renderWsList()" title="Delete">✕</button></td></tr>`).join('')+`</table>`
+    : 'Nothing scheduled.';
+}
+
+/* ---------- rules tab ---------- */
+function renderRules(){
+  $('rulesCodes').innerHTML = reasons.map(r=>
+    `<div class="list-item"><span><span class="tag" style="background:${r.color}">${esc(r.id)}</span> <strong>${esc(r.name)}</strong>${r.vessel?' — requires vessel name':''}${r.shift?' — WORKING: Sat / Sun / public holidays only':(r.work?' — WORKING (off site)':' — ABSENCE: only working days are counted')}</span></div>`).join('');
+  $('customRulesList').innerHTML = customRules.length ? customRules.map((r,i)=>
+    `<div class="list-item"><span>${esc(r)}</span><button class="del" onclick="delRule(${i})">✕</button></div>`).join('')
+    : '<p class="muted">No company rules added yet.</p>';
+}
+function addRule(){
+  const r=$('newRule').value.trim(); if(!r) return;
+  customRules.push(r); save(K.rules, customRules);
+  $('newRule').value=''; renderRules(); toast('Rule added ✔');
+}
+function delRule(i){ customRules.splice(i,1); save(K.rules, customRules); renderRules(); }
+
+/* ---------- download the site itself ---------- */
+function downloadSite(){
+  const dl = txt => { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/html'})); a.download='index.html'; a.click(); };
+  fetch(window.location.href).then(r=>r.text()).then(dl)
+    .catch(()=>dl('<!DOCTYPE html>\n'+document.documentElement.outerHTML));
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $('empListSettings').innerHTML = employees.length ? [...employees].sort((a,b)=>a.name.localeCompare(b.name)).map((e)=>{
+    const i = employees.indexOf(e);
+    return `<div class="list-item"><span><strong>${esc(e.name)}</strong> <span class="muted">· ${esc(e.dept||'no department')}</span></span>
+     <button class="del" onclick="delEmployee(${i})">✕</button></div>`;}).join('')
+    : '<p class="muted">No employees yet — add them below or paste a list.</p>';
+  $('newEmpDept').innerHTML = depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  const hy = parseInt($('holYear').value) || new Date().getFullYear();
+  $('holYear').value = hy;
+  const hm = holidayMap(hy);
+  $('holidayList').innerHTML = Object.keys(hm).sort().map(d=>{
+    const ci = customHols.findIndex(h=>h.date===d);
+    return `<div class="list-item"><span>${fmt(d)} — ${esc(hm[d])}</span>${ci>-1?`<button class="del" onclick="delHoliday(${ci})">✕</button>`:`<span class="muted">auto</span>`}</div>`;
+  }).join('');
+  $('reasonList').innerHTML = reasons.map((r,i)=>
+    `<div class="list-item"><span><span class="tag" style="background:${r.color}">${esc(r.id)}</span>
+     <input type="text" value="${esc(r.name)}" style="width:auto;display:inline-block;padding:8px;font-size:15px;margin-left:8px" onchange="renameReason(${i},this.value)">
+     ${r.vessel?'<span class="muted"> (requires vessel)</span>':''}</span>
+     <button class="del" onclick="delReason(${i})">✕</button></div>`).join('');
+  $('vesselList').innerHTML = vessels.length ? vessels.map((v,i)=>
+    `<div class="list-item"><input type="text" value="${esc(v)}" style="width:auto;flex:1;padding:8px;font-size:15px" onchange="renameVessel(${i},this.value)">
+     <button class="del" onclick="delVessel(${i})">✕</button></div>`).join('') : '<p class="muted">No vessels yet — add your fleet below.</p>';
+  $('deptList').innerHTML = depts.map((d,i)=>
+    `<div class="list-item"><span>${esc(d)}</span><button class="del" onclick="delDept(${i})">✕</button></div>`).join('');
+}
+function addReason(){
+  const n = $('newReason').value.trim(); if(!n) return;
+  const id = n.split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,3);
+  reasons.push({id, name:n, color:nextColor(), vessel:$('newReasonVessel').checked, work:$('newReasonWork').checked});
+  save(K.reasons, reasons); $('newReason').value=''; $('newReasonVessel').checked=false; $('newReasonWork').checked=false;
+  renderSettings(); renderReasonButtons();
+}
+function renameReason(i,v){ if(!v.trim())return; reasons[i].name=v.trim(); save(K.reasons,reasons); renderReasonButtons(); }
+function delReason(i){ if(!confirm('Remove reason "'+reasons[i].name+'"? Existing entries keep their code.'))return; reasons.splice(i,1); save(K.reasons,reasons); renderSettings(); renderReasonButtons(); }
+function addEmployee(){
+  const n = $('newEmpName').value.trim(); if(!n) return;
+  if(empExists(n)) return toast('Duplicate — "'+n+'" is already in the list');
+  employees.push({name:n, dept:$('newEmpDept').value});
+  save(K.emps, employees); $('newEmpName').value='';
+  renderSettings(); renderEmpSelect(); toast('Employee added ✔');
+}
+function bulkAddEmployees(){
+  const lines = $('bulkEmps').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return;
+  let added = 0, dupes = [];
+  lines.forEach(l=>{
+    const [n, d] = l.split(',').map(x=>x ? x.trim() : '');
+    if(!n) return;
+    if(empExists(n)) { dupes.push(n); return; }
+    employees.push({name:n, dept: d && depts.includes(d) ? d : (d || depts[0])});
+    if(d && !depts.includes(d) && d.length){ depts.push(d); save(K.depts, depts); }
+    added++;
+  });
+  save(K.emps, employees); $('bulkEmps').value='';
+  renderSettings(); renderEmpSelect(); renderDeptSelect();
+  toast(added+' added'+(dupes.length?' · '+dupes.length+' duplicates skipped: '+dupes.join(', '):''));
+}
+function delEmployee(i){
+  if(!confirm('Remove "'+employees[i].name+'" from the employee list? Past entries are kept.'))return;
+  employees.splice(i,1); save(K.emps, employees); renderSettings(); renderEmpSelect();
+}
+function addVessel(){ const v=$('newVessel').value.trim(); if(!v)return; if(vesselExists(v)) return toast('Duplicate — vessel "'+v+'" already exists'); vessels.push(v); save(K.vessels,vessels); $('newVessel').value=''; renderSettings(); renderVesselSelect(); }
+function renameVessel(i,v){ if(!v.trim())return; vessels[i]=v.trim(); save(K.vessels,vessels); renderVesselSelect(); }
+function delVessel(i){ vessels.splice(i,1); save(K.vessels,vessels); renderSettings(); renderVesselSelect(); }
+function addDept(){ const d=$('newDept').value.trim(); if(!d)return; depts.push(d); save(K.depts,depts); $('newDept').value=''; renderSettings(); renderDeptSelect(); }
+function delDept(i){ if(!confirm('Remove department "'+depts[i]+'"?'))return; depts.splice(i,1); save(K.depts,depts); renderSettings(); renderDeptSelect(); }
+
+/* ---------- export / import ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify({entries,reasons,vessels,depts,employees,customHols,customRules},null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'est-movement-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+function importData(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try {
+    const d = JSON.parse(r.result);
+    if(d.entries) entries=d.entries; if(d.reasons) reasons=d.reasons;
+    if(d.vessels) vessels=d.vessels; if(d.depts) depts=d.depts; if(d.employees) employees=d.employees; if(d.customHols) customHols=d.customHols; if(d.customRules) customRules=d.customRules;
+    save(K.entries,entries); save(K.reasons,reasons); save(K.vessels,vessels); save(K.depts,depts); save(K.emps,employees); save(K.hols,customHols); save(K.rules,customRules);
+    initRender(); toast('Backup imported ✔');
+  } catch { toast('Could not read that file'); } };
+  r.readAsText(f);
+}
+function loadBuiltIn(){
+  const mine = entries.filter(e => !DEFAULT_ENTRIES.some(d => d.id === e.id));
+  entries = DEFAULT_ENTRIES.concat(mine);
+  save(K.entries, entries);
+  renderRecent(); renderEmpSelect();
+  toast('Built-in data loaded — ' + entries.length + ' entries (your own entries were kept)');
+}
+function clearAll(){
+  if(!confirm('Delete ALL absence entries? Settings are kept. This cannot be undone.'))return;
+  entries=[]; save(K.entries,entries); renderRecent(); renderReport(); toast('All entries deleted');
+}
+
+/* ---------- init ---------- */
+function initRender(){
+  renderReasonButtons(); renderDeptSelect(); renderVesselSelect();
+  $('plannerDept').innerHTML = depts.map(d=>`<option${d==='Technical'?' selected':''}>${esc(d)}</option>`).join('');
+  $('reportDept').innerHTML = `<option value="__all__">All departments</option>` + depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  if(!$('plannerMonth').value) $('plannerMonth').value = new Date().toISOString().slice(0,7);
+  renderEmpSelect(); renderRecent(); renderSettings();
+  renderWsSelects(); renderWsQuick(); renderWsList(); renderRules();
+}
+initRender();
+</script>
+</body>
+</html>
