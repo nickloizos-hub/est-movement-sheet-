@@ -241,6 +241,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     <h2>Data</h2>
     <div class="btn-row">
       <button class="btn solid" onclick="exportData()">Export backup (JSON)</button>
+      <button class="btn" onclick="loadBuiltIn()">Load built-in data (Excel + demo)</button>
       <button class="btn" onclick="document.getElementById('importFile').click()">Import backup</button>
       <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
       <button class="btn danger" onclick="clearAll()">Delete all entries</button>
@@ -715,6 +716,13 @@ function importData(ev){
     initRender(); toast('Backup imported ✔');
   } catch { toast('Could not read that file'); } };
   r.readAsText(f);
+}
+function loadBuiltIn(){
+  const mine = entries.filter(e => !DEFAULT_ENTRIES.some(d => d.id === e.id));
+  entries = DEFAULT_ENTRIES.concat(mine);
+  save(K.entries, entries);
+  renderRecent(); renderEmpSelect();
+  toast('Built-in data loaded — ' + entries.length + ' entries (your own entries were kept)');
 }
 function clearAll(){
   if(!confirm('Delete ALL absence entries? Settings are kept. This cannot be undone.'))return;
