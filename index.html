@@ -66,7 +66,14 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 26px;border-radius:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
 .toast.show{opacity:1}
 .note{background:#fff7ec;border:1px solid #ffd9a8;border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:16px}
-@media print{header,nav,.no-print{display:none!important}main{max-width:100%}.card{border:none;padding:0}body{background:#fff}}
+.pl{border-collapse:collapse;font-size:11px;margin-top:8px}
+.pl th,.pl td{border:1px solid var(--line);padding:2px 3px;text-align:center;min-width:22px;font-weight:500}
+.pl th .wd{font-size:9px;color:var(--muted);font-weight:400}
+.pl .pname{position:sticky;left:0;background:#fff;text-align:left;min-width:130px;font-weight:600;z-index:1;padding-left:6px}
+.pl .we{background:#e8eef2}
+.pl .hol{background:#ffe5bd}
+.pl .ws{font-size:9px;background:#fff8e6;max-width:60px;word-break:break-word}
+@media print{header,nav,.no-print{display:none!important}main{max-width:100%}.card{border:none;padding:0}body{background:#fff}.pl{font-size:9px}.pl th,.pl td{min-width:14px;padding:1px}}
 </style>
 </head>
 <body>
@@ -79,6 +86,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 <nav><div class="tabs">
   <button id="tab-log" class="active" onclick="showTab('log')">Log Absence</button>
   <button id="tab-report" onclick="showTab('report')">Weekly Report</button>
+  <button id="tab-planner" onclick="showTab('planner')">Planner</button>
   <button id="tab-settings" onclick="showTab('settings')">Settings</button>
 </div></nav>
 <main>
@@ -117,6 +125,10 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
       <label for="vesselSel">Vessel</label>
       <select id="vesselSel"></select>
     </div>
+    <div id="swapBox" class="hidden">
+      <label for="swapSel">Swapped with (optional)</label>
+      <select id="swapSel"></select>
+    </div>
     <label for="entryNote">Note (optional)</label>
     <input type="text" id="entryNote" placeholder="Any extra detail">
     <button class="big-btn" onclick="saveEntry()">Save Entry</button>
@@ -135,12 +147,40 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     <p class="muted">Pick any date — the report covers that week (Monday to Sunday). Send the report every Friday by 17:00.</p>
     <label for="weekDate">Week of</label>
     <input type="date" id="weekDate" onchange="renderReport()">
+    <div class="row">
+      <div><label for="reportDept">Department</label><select id="reportDept" onchange="renderReport()"></select></div>
+      <div><label for="reportFmt">Format</label><select id="reportFmt" onchange="renderReport()"><option value="existing">Existing — tables by department</option><option value="grid">New — weekly grid (Mon–Sun)</option></select></div>
+    </div>
     <div class="btn-row">
       <button class="btn solid" onclick="copyReport()">Copy as text for email</button>
       <button class="btn" onclick="window.print()">Print / Save PDF</button>
     </div>
   </div>
   <div class="card" id="reportOut"></div>
+</section>
+
+<!-- ============ PLANNER TAB ============ -->
+<section id="view-planner" class="hidden">
+  <div class="card no-print">
+    <h2>Planner</h2>
+    <div class="row">
+      <div><label for="plannerDept">Department</label><select id="plannerDept" onchange="renderPlanner()"></select></div>
+      <div><label for="plannerMonth">Month</label><input type="month" id="plannerMonth" onchange="renderPlanner()"></div>
+    </div>
+    <label for="plannerFmt">Format</label>
+    <select id="plannerFmt" onchange="renderPlanner()">
+      <option value="grid">Existing — colour grid (Excel style)</option>
+      <option value="list">New — list with totals</option>
+    </select>
+    <div class="btn-row">
+      <button class="btn" onclick="plannerStep(-1)">◀ Previous</button>
+      <button class="btn" onclick="plannerStep(1)">Next ▶</button>
+      <button class="btn solid" onclick="renderPlannerYear()">Whole year</button>
+      <button class="btn" onclick="window.print()">Print / Save PDF</button>
+    </div>
+    <p class="muted">Colours = absence reason. Orange columns = public holidays, grey = weekends. The "Weekend shift" row shows who is on duty (→ means swapped).</p>
+  </div>
+  <div class="card" id="plannerOut" style="overflow-x:auto"></div>
 </section>
 
 <!-- ============ SETTINGS TAB ============ -->
@@ -186,6 +226,18 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     </div>
   </div>
   <div class="card">
+    <h2>Public Holidays</h2>
+    <p class="muted">Greek public holidays (incl. Orthodox Easter dates) are calculated automatically. You can add extra dates.</p>
+    <label for="holYear">Year</label>
+    <input type="text" id="holYear" inputmode="numeric" style="max-width:120px" onchange="renderSettings()">
+    <div id="holidayList"></div>
+    <div class="add-row">
+      <input type="date" id="newHolDate" style="max-width:200px">
+      <input type="text" id="newHolName" placeholder="Holiday name">
+      <button class="btn solid" onclick="addHoliday()">Add</button>
+    </div>
+  </div>
+  <div class="card">
     <h2>Data</h2>
     <div class="btn-row">
       <button class="btn solid" onclick="exportData()">Export backup (JSON)</button>
@@ -201,11 +253,12 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 
 <script>
 /* ---------- storage ---------- */
-const K = {entries:'est_entries', reasons:'est_reasons', vessels:'est_vessels', depts:'est_depts', emps:'est_employees'};
+const K = {entries:'est_entries', reasons:'est_reasons', vessels:'est_vessels', depts:'est_depts', emps:'est_employees', hols:'est_customhols'};
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
-let entries = load(K.entries, []);
+const DEFAULT_ENTRIES = [{"id": 1000001, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-05", "to": "2026-02-06", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000002, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-09", "to": "2026-02-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000003, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-24", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000004, "name": "George Chronis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000005, "name": "George Chronis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000006, "name": "George Chronis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000007, "name": "Sophia Drosou", "dept": "Technical", "from": "2026-02-27", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000008, "name": "Sophia Drosou", "dept": "Technical", "from": "2026-03-02", "to": "2026-03-03", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000009, "name": "Lia Karagianni", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000010, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000011, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000012, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000013, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000014, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-04-06", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000015, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-06-22", "to": "2026-06-26", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000016, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-16", "to": "2026-03-20", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000017, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-23", "to": "2026-03-24", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000018, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000019, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-03-09", "to": "2026-03-11", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000020, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000021, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-06-15", "to": "2026-06-19", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000022, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000023, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000024, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-12", "to": "2026-01-16", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000025, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-02-11", "to": "2026-02-13", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000026, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-04-20", "to": "2026-04-24", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000027, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000028, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000029, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-04-06", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000030, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000031, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000032, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-05-06", "to": "2026-05-08", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000033, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-05-11", "to": "2026-05-13", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000034, "name": "George Tzortzis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000035, "name": "George Tzortzis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000036, "name": "George Tzortzis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000037, "name": "George Tzortzis", "dept": "Technical", "from": "2026-04-20", "to": "2026-04-20", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000038, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000039, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000040, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000041, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-04-08", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000042, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-14", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000043, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000044, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000045, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-02-25", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000046, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000047, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-01", "to": "2026-01-01", "reason": "WS", "vessel": "", "swap": "Antonios Psyllas", "note": "duty rota 2026"}, {"id": 1000048, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-01-03", "to": "2026-01-03", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000049, "name": "George Chronis", "dept": "Technical", "from": "2026-01-06", "to": "2026-01-06", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000050, "name": "Theocharis (Tech)", "dept": "Technical", "from": "2026-01-10", "to": "2026-01-11", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000051, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-17", "to": "2026-01-17", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000052, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-01-24", "to": "2026-01-25", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000053, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-31", "to": "2026-01-31", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000054, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-02-07", "to": "2026-02-08", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000055, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-02-14", "to": "2026-02-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000056, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-02-21", "to": "2026-02-22", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000057, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-02-23", "to": "2026-02-23", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000058, "name": "George Chronis", "dept": "Technical", "from": "2026-02-28", "to": "2026-02-28", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000059, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-03-07", "to": "2026-03-08", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000060, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-03-14", "to": "2026-03-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000061, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-03-21", "to": "2026-03-22", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000062, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-25", "to": "2026-03-25", "reason": "WS", "vessel": "", "swap": "Antonios Psyllas", "note": "duty rota 2026"}, {"id": 1000063, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-03-28", "to": "2026-03-28", "reason": "WS", "vessel": "", "swap": "Ilias Kokiopoulos", "note": "duty rota 2026"}, {"id": 1000064, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-04-04", "to": "2026-04-05", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000065, "name": "George Chronis", "dept": "Technical", "from": "2026-04-10", "to": "2026-04-10", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000066, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-04-11", "to": "2026-04-11", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000067, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-04-13", "to": "2026-04-13", "reason": "WS", "vessel": "", "swap": "Charalampos Kremidas", "note": "duty rota 2026"}, {"id": 1000068, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-04-18", "to": "2026-04-19", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000069, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-04-25", "to": "2026-04-25", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000070, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-05-01", "to": "2026-05-01", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000071, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-05-02", "to": "2026-05-03", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000072, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-05-09", "to": "2026-05-09", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000073, "name": "Nikos Linardos", "dept": "Technical", "from": "2026-05-16", "to": "2026-05-17", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000074, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-05-23", "to": "2026-05-23", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000075, "name": "George Chronis", "dept": "Technical", "from": "2026-05-30", "to": "2026-05-31", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000076, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-06-01", "to": "2026-06-01", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000077, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-06-06", "to": "2026-06-06", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000078, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000079, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-06-20", "to": "2026-06-20", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}].concat([{"id": 2000001, "name": "Kostas Angelaras", "dept": "Operations", "from": "2026-06-10", "to": "2026-06-12", "reason": "VA", "vessel": "ENERGY ATHENA", "swap": "", "note": "demo data"}, {"id": 2000002, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-06-09", "to": "2026-06-11", "reason": "VA", "vessel": "ENERGY DELOS", "swap": "", "note": "demo data"}, {"id": 2000003, "name": "Eleni Labrou", "dept": "Accounts", "from": "2026-06-11", "to": "2026-06-12", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000004, "name": "Hara Kalodouka", "dept": "Supply", "from": "2026-06-08", "to": "2026-06-12", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000005, "name": "Maria Zampeli", "dept": "Management", "from": "2026-06-11", "to": "2026-06-11", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000006, "name": "Katerina Karoussou", "dept": "Crew / ISPS - Security", "from": "2026-06-09", "to": "2026-06-10", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000007, "name": "Dimitris Vergis", "dept": "Claims", "from": "2026-06-15", "to": "2026-06-17", "reason": "VA", "vessel": "GLADIATOR", "swap": "", "note": "demo data"}, {"id": 2000008, "name": "Sofia Zogana", "dept": "QHSE / ISM", "from": "2026-06-15", "to": "2026-06-19", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000009, "name": "Elias Hadjithomas", "dept": "Operations", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "Filippos Fasilis", "note": "demo data"}, {"id": 2000010, "name": "Stavros Lymperis", "dept": "Supply", "from": "2026-06-16", "to": "2026-06-16", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}]);
+let entries = load(K.entries, DEFAULT_ENTRIES);
 let reasons = load(K.reasons, [
   {id:'H',  name:'Holiday',           color:'#1273b5', vessel:false},
   {id:'M',  name:'Medical',           color:'#c0392b', vessel:false},
@@ -216,11 +269,13 @@ const DEFAULT_VESSELS = ["ALORA", "CITIUS", "COLOSSUS", "CONSTANTIA (ex GOTIA)",
 let vessels = load(K.vessels, DEFAULT_VESSELS);
 const DEFAULT_DEPTS = ["Management", "Chartering (Bulk Carriers)", "Chartering (Tankers)", "Technical", "Spares", "Forwarding", "Operations", "Operations (Tankers) / Vetting", "Crew / ISPS - Security", "Treasury", "Finance", "Legal", "QHSE / ISM", "Protocol", "Reception", "Cafeteria - Store Room", "F-Estimation S.A.", "E.D.P. (IT)", "Freight", "Supply", "Control", "Claims", "Accounts", "Banking"];
 let depts = load(K.depts, DEFAULT_DEPTS);
-const DEFAULT_EMPLOYEES = [{"name": "George Sarris", "dept": "Management"}, {"name": "Maria Zampeli", "dept": "Management"}, {"name": "Natassa Petri", "dept": "Management"}, {"name": "Dimitra Karadimou", "dept": "Management"}, {"name": "George Kalogeropoulos", "dept": "Chartering (Bulk Carriers)"}, {"name": "Stelios Charmesizis", "dept": "Chartering (Bulk Carriers)"}, {"name": "Xenia Rigou", "dept": "Chartering (Bulk Carriers)"}, {"name": "Mary Diamantopoulou", "dept": "Chartering (Bulk Carriers)"}, {"name": "Kyriakos Zarvanos", "dept": "Chartering (Tankers)"}, {"name": "Sakis Kechagioglou", "dept": "Chartering (Tankers)"}, {"name": "Vangelis Candiotis", "dept": "Technical"}, {"name": "Thanasis Papachatzis", "dept": "Technical"}, {"name": "George Chronis", "dept": "Technical"}, {"name": "Ioannis Pavlou", "dept": "Technical"}, {"name": "Antonis Polikandriotis", "dept": "Technical"}, {"name": "Goulielmos Roussos", "dept": "Technical"}, {"name": "Ilias Kokiopoulos", "dept": "Technical"}, {"name": "Aris Ziatas", "dept": "Technical"}, {"name": "Charalampos Kremidas", "dept": "Technical"}, {"name": "George Tzortzis", "dept": "Technical"}, {"name": "Spiros Karnadakis", "dept": "Technical"}, {"name": "Antonios Psyllas", "dept": "Technical"}, {"name": "Nikolaos Loizos", "dept": "Technical"}, {"name": "Panagiotis Ziakas", "dept": "Technical"}, {"name": "Nikos Linardos", "dept": "Technical"}, {"name": "Lia Karagianni", "dept": "Technical"}, {"name": "Katerina Mermigka", "dept": "Technical"}, {"name": "Sophia Drosou", "dept": "Technical"}, {"name": "Jenny Georgala", "dept": "Spares"}, {"name": "Anthea Sarri", "dept": "Spares"}, {"name": "Nena Pleoura", "dept": "Spares"}, {"name": "Georgia Souti", "dept": "Spares"}, {"name": "Martha Lekka", "dept": "Spares"}, {"name": "Konstantina Georgala", "dept": "Spares"}, {"name": "Bella Politis", "dept": "Forwarding"}, {"name": "Michalis Koutsodontis", "dept": "Forwarding"}, {"name": "Elias Hadjithomas", "dept": "Operations"}, {"name": "Kostas Angelaras", "dept": "Operations"}, {"name": "Vassilis Ferentouros", "dept": "Operations"}, {"name": "Andreas Toubakaris", "dept": "Operations"}, {"name": "Elias Dimakopoulos", "dept": "Operations"}, {"name": "Filippos Fasilis", "dept": "Operations"}, {"name": "Vitaliy Skidanov", "dept": "Operations"}, {"name": "Panagiotis Katsafaros", "dept": "Operations"}, {"name": "Anastasia Argiriou", "dept": "Operations"}, {"name": "Tasos Triantafillidis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Thanasis Papantonis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Orestis Perilis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Theodore Voryllas", "dept": "Operations (Tankers) / Vetting"}, {"name": "Aristeidis Zoros", "dept": "Operations (Tankers) / Vetting"}, {"name": "Katerina Molfeta", "dept": "Operations (Tankers) / Vetting"}, {"name": "Maria Tzavara", "dept": "Operations (Tankers) / Vetting"}, {"name": "Nefeli Triantafillidi", "dept": "Operations (Tankers) / Vetting"}, {"name": "John Georgalas", "dept": "Crew / ISPS - Security"}, {"name": "Christoforos Bissias", "dept": "Crew / ISPS - Security"}, {"name": "Konstantinos Arkoudis", "dept": "Crew / ISPS - Security"}, {"name": "Katerina Karoussou", "dept": "Crew / ISPS - Security"}, {"name": "Angeliki Panagiotarou", "dept": "Crew / ISPS - Security"}, {"name": "Elina Koukouli", "dept": "Crew / ISPS - Security"}, {"name": "Irene Kritikou", "dept": "Treasury"}, {"name": "Dimitra Arabatzi", "dept": "Treasury"}, {"name": "Efi Kiskira", "dept": "Treasury"}, {"name": "George Kakoulidis", "dept": "Finance"}, {"name": "Georgia Ropali", "dept": "Finance"}, {"name": "Georgia Kobougia", "dept": "Finance"}, {"name": "Katerina Karagouni", "dept": "Legal"}, {"name": "Dimitra Kousiouri", "dept": "Legal"}, {"name": "Evi Zachari", "dept": "Legal"}, {"name": "Katerina Zabeli", "dept": "Legal"}, {"name": "Sofia Zogana", "dept": "QHSE / ISM"}, {"name": "Katerina Gemidopoulou", "dept": "QHSE / ISM"}, {"name": "Anna Tsesmeloglou", "dept": "QHSE / ISM"}, {"name": "Georgia Rina", "dept": "QHSE / ISM"}, {"name": "Anastasia Kitso", "dept": "QHSE / ISM"}, {"name": "Nicole Tserkezou", "dept": "QHSE / ISM"}, {"name": "Xenia Lolou", "dept": "Protocol"}, {"name": "Filio Bakaouka", "dept": "Reception"}, {"name": "Giannis Christou", "dept": "Reception"}, {"name": "George Tougoutzoglou", "dept": "Reception"}, {"name": "Nikos Loutrianakis", "dept": "Reception"}, {"name": "Renata Lukasiak", "dept": "Cafeteria - Store Room"}, {"name": "Evaggelia Pouriki", "dept": "Cafeteria - Store Room"}, {"name": "Beata Borys", "dept": "Cafeteria - Store Room"}, {"name": "Christos Pourikis", "dept": "Cafeteria - Store Room"}, {"name": "Dimitris Drakopoulos", "dept": "Cafeteria - Store Room"}, {"name": "Gerasimos Avgeris", "dept": "F-Estimation S.A."}, {"name": "Haris Lourida", "dept": "F-Estimation S.A."}, {"name": "Costas Roussos", "dept": "E.D.P. (IT)"}, {"name": "Thanassis Leventakis", "dept": "E.D.P. (IT)"}, {"name": "Stamatis Gizas", "dept": "E.D.P. (IT)"}, {"name": "Costas Zarmakoupis", "dept": "E.D.P. (IT)"}, {"name": "Marinos Mavrommatis", "dept": "Freight"}, {"name": "Evy Vamvoulis", "dept": "Freight"}, {"name": "Marietta Bonn", "dept": "Supply"}, {"name": "Stavros Lymperis", "dept": "Supply"}, {"name": "Hara Kalodouka", "dept": "Supply"}, {"name": "Maria Triantafillou", "dept": "Supply"}, {"name": "Evina Mayiorkinou", "dept": "Supply"}, {"name": "Panagiota Limperopoulou", "dept": "Supply"}, {"name": "Fotini Giannouli", "dept": "Supply"}, {"name": "Mina Seitanidou", "dept": "Control"}, {"name": "Minas Mavrommatis", "dept": "Control"}, {"name": "Konstantinos Leotatis", "dept": "Control"}, {"name": "Christina Lourentzatou", "dept": "Control"}, {"name": "Vassilis Georgakopoulos", "dept": "Claims"}, {"name": "Vassilis Papaiakovou", "dept": "Claims"}, {"name": "Dimitris Vergis", "dept": "Claims"}, {"name": "Mariaelen Kavvadia", "dept": "Claims"}, {"name": "Aggelos Mitrossis", "dept": "Accounts"}, {"name": "Eleni Labrou", "dept": "Accounts"}, {"name": "Spiros Tzatzanis", "dept": "Accounts"}, {"name": "George Ziotopoulos", "dept": "Accounts"}, {"name": "Eleni Boura", "dept": "Accounts"}, {"name": "Athanasia Boura", "dept": "Accounts"}, {"name": "Konstantinos Panagopoulos", "dept": "Accounts"}, {"name": "Chrisoula Gerodimou", "dept": "Banking"}, {"name": "Thomae Nikolaou", "dept": "Banking"}];
+const DEFAULT_EMPLOYEES = [{"name": "George Sarris", "dept": "Management"}, {"name": "Maria Zampeli", "dept": "Management"}, {"name": "Natassa Petri", "dept": "Management"}, {"name": "Dimitra Karadimou", "dept": "Management"}, {"name": "George Kalogeropoulos", "dept": "Chartering (Bulk Carriers)"}, {"name": "Stelios Charmesizis", "dept": "Chartering (Bulk Carriers)"}, {"name": "Xenia Rigou", "dept": "Chartering (Bulk Carriers)"}, {"name": "Mary Diamantopoulou", "dept": "Chartering (Bulk Carriers)"}, {"name": "Kyriakos Zarvanos", "dept": "Chartering (Tankers)"}, {"name": "Sakis Kechagioglou", "dept": "Chartering (Tankers)"}, {"name": "Vangelis Candiotis", "dept": "Technical"}, {"name": "Thanasis Papachatzis", "dept": "Technical"}, {"name": "George Chronis", "dept": "Technical"}, {"name": "Ioannis Pavlou", "dept": "Technical"}, {"name": "Antonis Polikandriotis", "dept": "Technical"}, {"name": "Goulielmos Roussos", "dept": "Technical"}, {"name": "Ilias Kokiopoulos", "dept": "Technical"}, {"name": "Aris Ziatas", "dept": "Technical"}, {"name": "Charalampos Kremidas", "dept": "Technical"}, {"name": "George Tzortzis", "dept": "Technical"}, {"name": "Spiros Karnadakis", "dept": "Technical"}, {"name": "Antonios Psyllas", "dept": "Technical"}, {"name": "Nikolaos Loizos", "dept": "Technical"}, {"name": "Panagiotis Ziakas", "dept": "Technical"}, {"name": "Nikos Linardos", "dept": "Technical"}, {"name": "Lia Karagianni", "dept": "Technical"}, {"name": "Katerina Mermigka", "dept": "Technical"}, {"name": "Sophia Drosou", "dept": "Technical"}, {"name": "Theocharis (Tech)", "dept": "Technical"}, {"name": "Jenny Georgala", "dept": "Spares"}, {"name": "Anthea Sarri", "dept": "Spares"}, {"name": "Nena Pleoura", "dept": "Spares"}, {"name": "Georgia Souti", "dept": "Spares"}, {"name": "Martha Lekka", "dept": "Spares"}, {"name": "Konstantina Georgala", "dept": "Spares"}, {"name": "Bella Politis", "dept": "Forwarding"}, {"name": "Michalis Koutsodontis", "dept": "Forwarding"}, {"name": "Elias Hadjithomas", "dept": "Operations"}, {"name": "Kostas Angelaras", "dept": "Operations"}, {"name": "Vassilis Ferentouros", "dept": "Operations"}, {"name": "Andreas Toubakaris", "dept": "Operations"}, {"name": "Elias Dimakopoulos", "dept": "Operations"}, {"name": "Filippos Fasilis", "dept": "Operations"}, {"name": "Vitaliy Skidanov", "dept": "Operations"}, {"name": "Panagiotis Katsafaros", "dept": "Operations"}, {"name": "Anastasia Argiriou", "dept": "Operations"}, {"name": "Tasos Triantafillidis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Thanasis Papantonis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Orestis Perilis", "dept": "Operations (Tankers) / Vetting"}, {"name": "Theodore Voryllas", "dept": "Operations (Tankers) / Vetting"}, {"name": "Aristeidis Zoros", "dept": "Operations (Tankers) / Vetting"}, {"name": "Katerina Molfeta", "dept": "Operations (Tankers) / Vetting"}, {"name": "Maria Tzavara", "dept": "Operations (Tankers) / Vetting"}, {"name": "Nefeli Triantafillidi", "dept": "Operations (Tankers) / Vetting"}, {"name": "John Georgalas", "dept": "Crew / ISPS - Security"}, {"name": "Christoforos Bissias", "dept": "Crew / ISPS - Security"}, {"name": "Konstantinos Arkoudis", "dept": "Crew / ISPS - Security"}, {"name": "Katerina Karoussou", "dept": "Crew / ISPS - Security"}, {"name": "Angeliki Panagiotarou", "dept": "Crew / ISPS - Security"}, {"name": "Elina Koukouli", "dept": "Crew / ISPS - Security"}, {"name": "Irene Kritikou", "dept": "Treasury"}, {"name": "Dimitra Arabatzi", "dept": "Treasury"}, {"name": "Efi Kiskira", "dept": "Treasury"}, {"name": "George Kakoulidis", "dept": "Finance"}, {"name": "Georgia Ropali", "dept": "Finance"}, {"name": "Georgia Kobougia", "dept": "Finance"}, {"name": "Katerina Karagouni", "dept": "Legal"}, {"name": "Dimitra Kousiouri", "dept": "Legal"}, {"name": "Evi Zachari", "dept": "Legal"}, {"name": "Katerina Zabeli", "dept": "Legal"}, {"name": "Sofia Zogana", "dept": "QHSE / ISM"}, {"name": "Katerina Gemidopoulou", "dept": "QHSE / ISM"}, {"name": "Anna Tsesmeloglou", "dept": "QHSE / ISM"}, {"name": "Georgia Rina", "dept": "QHSE / ISM"}, {"name": "Anastasia Kitso", "dept": "QHSE / ISM"}, {"name": "Nicole Tserkezou", "dept": "QHSE / ISM"}, {"name": "Xenia Lolou", "dept": "Protocol"}, {"name": "Filio Bakaouka", "dept": "Reception"}, {"name": "Giannis Christou", "dept": "Reception"}, {"name": "George Tougoutzoglou", "dept": "Reception"}, {"name": "Nikos Loutrianakis", "dept": "Reception"}, {"name": "Renata Lukasiak", "dept": "Cafeteria - Store Room"}, {"name": "Evaggelia Pouriki", "dept": "Cafeteria - Store Room"}, {"name": "Beata Borys", "dept": "Cafeteria - Store Room"}, {"name": "Christos Pourikis", "dept": "Cafeteria - Store Room"}, {"name": "Dimitris Drakopoulos", "dept": "Cafeteria - Store Room"}, {"name": "Gerasimos Avgeris", "dept": "F-Estimation S.A."}, {"name": "Haris Lourida", "dept": "F-Estimation S.A."}, {"name": "Costas Roussos", "dept": "E.D.P. (IT)"}, {"name": "Thanassis Leventakis", "dept": "E.D.P. (IT)"}, {"name": "Stamatis Gizas", "dept": "E.D.P. (IT)"}, {"name": "Costas Zarmakoupis", "dept": "E.D.P. (IT)"}, {"name": "Marinos Mavrommatis", "dept": "Freight"}, {"name": "Evy Vamvoulis", "dept": "Freight"}, {"name": "Marietta Bonn", "dept": "Supply"}, {"name": "Stavros Lymperis", "dept": "Supply"}, {"name": "Hara Kalodouka", "dept": "Supply"}, {"name": "Maria Triantafillou", "dept": "Supply"}, {"name": "Evina Mayiorkinou", "dept": "Supply"}, {"name": "Panagiota Limperopoulou", "dept": "Supply"}, {"name": "Fotini Giannouli", "dept": "Supply"}, {"name": "Mina Seitanidou", "dept": "Control"}, {"name": "Minas Mavrommatis", "dept": "Control"}, {"name": "Konstantinos Leotatis", "dept": "Control"}, {"name": "Christina Lourentzatou", "dept": "Control"}, {"name": "Vassilis Georgakopoulos", "dept": "Claims"}, {"name": "Vassilis Papaiakovou", "dept": "Claims"}, {"name": "Dimitris Vergis", "dept": "Claims"}, {"name": "Mariaelen Kavvadia", "dept": "Claims"}, {"name": "Aggelos Mitrossis", "dept": "Accounts"}, {"name": "Eleni Labrou", "dept": "Accounts"}, {"name": "Spiros Tzatzanis", "dept": "Accounts"}, {"name": "George Ziotopoulos", "dept": "Accounts"}, {"name": "Eleni Boura", "dept": "Accounts"}, {"name": "Athanasia Boura", "dept": "Accounts"}, {"name": "Konstantinos Panagopoulos", "dept": "Accounts"}, {"name": "Chrisoula Gerodimou", "dept": "Banking"}, {"name": "Thomae Nikolaou", "dept": "Banking"}];
 let employees = load(K.emps, DEFAULT_EMPLOYEES);
 const norm = s => s.trim().toLowerCase().replace(/\s+/g,' ');
 const empExists = n => employees.some(e => norm(e.name) === norm(n));
 const vesselExists = n => vessels.some(v => norm(v) === norm(n));
+let customHols = load(K.hols, []); // [{date:'YYYY-MM-DD', name}]
+if(!reasons.some(r=>r.id==='WS')){ reasons.push({id:'WS', name:'Weekend Shift', color:'#a36b00', vessel:false, shift:true}); }
 
 let selectedReason = null;
 
@@ -233,11 +288,12 @@ function nextColor(){ const c=['#b56a12','#12649b','#5f7a0d','#9b1264','#0d6a7a'
 
 /* ---------- tabs ---------- */
 function showTab(t){
-  ['log','report','settings'].forEach(x=>{
+  ['log','report','planner','settings'].forEach(x=>{
     $('view-'+x).classList.toggle('hidden', x!==t);
     $('tab-'+x).classList.toggle('active', x===t);
   });
   if(t==='report') renderReport();
+  if(t==='planner') renderPlanner();
 }
 
 /* ---------- render pickers ---------- */
@@ -250,6 +306,7 @@ function pickReason(id){
   selectedReason = id;
   const r = reasons.find(x=>x.id===id);
   $('vesselBox').classList.toggle('hidden', !(r && r.vessel));
+  $('swapBox').classList.toggle('hidden', !(r && r.shift));
   renderReasonButtons();
 }
 function renderDeptSelect(){
@@ -264,6 +321,7 @@ function renderEmpSelect(){
   const opts = [...employees].sort((a,b)=>a.name.localeCompare(b.name))
     .map(e=>`<option value="${esc(e.name)}">${esc(e.name)} — ${esc(e.dept||'')}</option>`).join('');
   $('empSel').innerHTML = `<option value="">— select employee —</option>` + opts + `<option value="__new__">➕ Add new employee…</option>`;
+  $('swapSel').innerHTML = `<option value="">— no swap —</option>` + [...employees].sort((a,b)=>a.name.localeCompare(b.name)).map(e=>`<option>${esc(e.name)}</option>`).join('');
 }
 function empPicked(){
   const v = $('empSel').value;
@@ -300,11 +358,12 @@ function saveEntry(){
   if(r && r.vessel && !vessel) return toast('Pick a vessel (add one in Settings)');
   const overlap = entries.find(e => norm(e.name)===norm(name) && e.from <= to && e.to >= from);
   if(overlap && !confirm('Possible duplicate: '+name+' already has an entry '+fmt(overlap.from)+(overlap.to!==overlap.from?' – '+fmt(overlap.to):'')+' ('+reasonOf(overlap).name+'). Save anyway?')) return;
-  entries.push({id:Date.now(), name, dept, from, to, reason:selectedReason, vessel, note:$('entryNote').value.trim()});
+  const swap = (r && r.shift) ? $('swapSel').value : '';
+  entries.push({id:Date.now(), name, dept, from, to, reason:selectedReason, vessel, swap, note:$('entryNote').value.trim()});
   save(K.entries, entries);
   $('empSel').value=''; $('empName').value=''; $('newEmpBox').classList.add('hidden');
   $('entryNote').value=''; $('dateFrom').value=''; $('dateTo').value='';
-  selectedReason=null; $('vesselBox').classList.add('hidden');
+  selectedReason=null; $('vesselBox').classList.add('hidden'); $('swapBox').classList.add('hidden'); $('swapSel').value='';
   renderReasonButtons(); renderRecent();
   toast('Saved ✔');
 }
@@ -319,7 +378,7 @@ function renderRecent(){
     last.map(e=>{ const r=reasonOf(e);
       return `<tr><td><strong>${esc(e.name)}</strong></td><td>${esc(e.dept)}</td>
       <td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td>
-      <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}${e.vessel?' · '+esc(e.vessel):''}</td>
+      <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}${e.vessel?' · '+esc(e.vessel):''}${e.swap?' ⇄ '+esc(e.swap):''}</td>
       <td><button class="del" onclick="delEntry(${e.id})" title="Delete">✕</button></td></tr>`;}).join('') + `</table>`
     : 'No entries yet.';
 }
@@ -340,11 +399,17 @@ function renderReport(){
   const wd = $('weekDate').value || new Date().toISOString().slice(0,10);
   $('weekDate').value = wd;
   const [ws, we] = weekBounds(wd);
-  const list = entriesInWeek(ws, we);
-  let html = `<h2>Weekly Movement Report</h2><p class="muted">Week ${fmt(ws)} – ${fmt(we)} · Generated ${new Date().toLocaleDateString('en-GB')}</p>`;
-  if(!list.length){ $('reportOut').innerHTML = html + '<p class="muted">No absences recorded this week.</p>'; return; }
+  const rd = $('reportDept').value || '__all__';
+  const list = entriesInWeek(ws, we).filter(e => rd==='__all__' || e.dept===rd);
+  let html = `<h2>Weekly Movement Report${rd==='__all__'?'':' — '+esc(rd)}</h2><p class="muted">Week ${fmt(ws)} – ${fmt(we)} · Generated ${new Date().toLocaleDateString('en-GB')}</p>`;
+  const hols = holidaysInRange(ws, we);
+  if(hols.length) html += `<p class="muted">Public holidays this week: ${hols.map(h=>fmt(h.date)+' '+esc(h.name)).join(' · ')}</p>`;
+  if(($('reportFmt').value||'existing')==='grid'){ $('reportOut').innerHTML = html + weekGridHTML(ws, list); return; }
+  const shifts = list.filter(isShift);
+  const abs = list.filter(e=>!isShift(e));
+  if(!abs.length && !shifts.length){ $('reportOut').innerHTML = html + '<p class="muted">No absences recorded this week.</p>'; return; }
   const byDept = {};
-  list.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
+  abs.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
   Object.keys(byDept).sort().forEach(d=>{
     html += `<div class="dept-head">${esc(d)}</div><table><tr><th>Name</th><th>Dates</th><th>Reason</th><th>Vessel</th><th>Note</th></tr>`;
     byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
@@ -355,25 +420,212 @@ function renderReport(){
     });
     html += `</table>`;
   });
+  if(shifts.length){
+    html += `<div class="dept-head">Weekend Duty</div><table><tr><th>Name</th><th>Dates</th><th>Department</th><th>Swap</th></tr>`;
+    shifts.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
+      html += `<tr><td><strong>${esc(e.name)}</strong></td><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td>${esc(e.dept)}</td><td>${e.swap?'→ '+esc(e.swap):'—'}</td></tr>`;
+    });
+    html += `</table>`;
+  }
   $('reportOut').innerHTML = html;
 }
 function copyReport(){
   const wd = $('weekDate').value || new Date().toISOString().slice(0,10);
   const [ws, we] = weekBounds(wd);
-  const list = entriesInWeek(ws, we);
-  let txt = `EST MOVEMENT SHEET — WEEKLY REPORT\nWeek: ${fmt(ws)} – ${fmt(we)}\n`;
-  if(!list.length){ txt += '\nNo absences recorded this week.\n'; }
+  const rd = $('reportDept').value || '__all__';
+  const list = entriesInWeek(ws, we).filter(e => rd==='__all__' || e.dept===rd);
+  let txt = `EST MOVEMENT SHEET — WEEKLY REPORT${rd==='__all__'?'':' — '+rd.toUpperCase()}\nWeek: ${fmt(ws)} – ${fmt(we)}\n`;
+  const hols = holidaysInRange(ws, we);
+  if(hols.length) txt += 'Public holidays: ' + hols.map(h=>fmt(h.date)+' '+h.name).join(' · ') + '\n';
+  const shifts = list.filter(isShift);
+  const abs = list.filter(e=>!isShift(e));
+  if(!abs.length && !shifts.length){ txt += '\nNo absences recorded this week.\n'; }
   else {
     const byDept = {};
-    list.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
+    abs.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
     Object.keys(byDept).sort().forEach(d=>{
       txt += `\n--- ${d.toUpperCase()} ---\n`;
       byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
         txt += `• ${e.name} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${r.name}${e.vessel?' ('+e.vessel+')':''}${e.note?' | '+e.note:''}\n`;
       });
     });
+    if(shifts.length){
+      txt += `\n--- WEEKEND DUTY ---\n`;
+      shifts.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
+        txt += `• ${e.name} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${e.dept}${e.swap?' | swapped with '+e.swap:''}\n`;
+      });
+    }
   }
   navigator.clipboard.writeText(txt).then(()=>toast('Report copied — paste into your email'));
+}
+
+/* ---------- public holidays (Greek, incl. Orthodox Easter) ---------- */
+function orthodoxEaster(y){
+  const d=(19*(y%19)+15)%30;
+  const e=(2*(y%4)+4*(y%7)-d+34)%7;
+  const month=Math.floor((d+e+114)/31);
+  const day=((d+e+114)%31)+1;
+  const dt=new Date(Date.UTC(y,month-1,day));
+  dt.setUTCDate(dt.getUTCDate()+13); // Julian -> Gregorian (1900-2099)
+  return dt;
+}
+function addDaysU(dt,n){ const x=new Date(dt); x.setUTCDate(x.getUTCDate()+n); return x; }
+const isoU = dt => dt.toISOString().slice(0,10);
+function holidayMap(y){
+  const E=orthodoxEaster(y), m={};
+  m[y+'-01-01']='New Year';
+  m[y+'-01-06']='Epiphany';
+  m[isoU(addDaysU(E,-48))]='Clean Monday';
+  m[y+'-03-25']='Independence Day';
+  m[isoU(addDaysU(E,-2))]='Good Friday';
+  m[isoU(addDaysU(E,1))]='Easter Monday';
+  m[y+'-05-01']='Labour Day';
+  m[isoU(addDaysU(E,50))]='Holy Spirit Monday';
+  m[y+'-08-15']='Assumption Day';
+  m[y+'-10-28']='Ochi Day';
+  m[y+'-12-25']='Christmas Day';
+  m[y+'-12-26']='Boxing Day';
+  customHols.forEach(h=>{ if(h.date && h.date.slice(0,4)==String(y)) m[h.date]=h.name||'Custom holiday'; });
+  return m;
+}
+function holidaysInRange(ws,we){
+  const out=[];
+  for(let y=+ws.slice(0,4); y<=+we.slice(0,4); y++){
+    const m=holidayMap(y);
+    for(const d in m){ if(d>=ws && d<=we) out.push({date:d, name:m[d]}); }
+  }
+  return out.sort((a,b)=>a.date<b.date?-1:1);
+}
+function addHoliday(){
+  const d=$('newHolDate').value, n=$('newHolName').value.trim();
+  if(!d) return toast('Pick a date');
+  if(customHols.some(h=>h.date===d) || holidayMap(+d.slice(0,4))[d] && !customHols.some(h=>h.date===d)) {
+    if(holidayMap(+d.slice(0,4))[d] && !customHols.some(h=>h.date===d)) return toast('Duplicate — that date is already a holiday');
+  }
+  customHols.push({date:d, name:n||'Custom holiday'});
+  save(K.hols, customHols);
+  $('newHolDate').value=''; $('newHolName').value='';
+  renderSettings(); toast('Holiday added ✔');
+}
+function delHoliday(i){ customHols.splice(i,1); save(K.hols, customHols); renderSettings(); }
+
+/* ---------- planner ---------- */
+const isShift = e => !!(reasonOf(e).shift);
+function shortName(n){ const p=String(n).trim().split(/\s+/); return p[p.length-1].toUpperCase(); }
+function plannerStep(d){
+  const v=$('plannerMonth').value || new Date().toISOString().slice(0,7);
+  let [y,m]=v.split('-').map(Number); m+=d;
+  if(m<1){m=12;y--;} if(m>12){m=1;y++;}
+  $('plannerMonth').value=y+'-'+String(m).padStart(2,'0');
+  renderPlanner();
+}
+function monthGridHTML(y,m,dept){
+  const dim=new Date(y,m,0).getDate();
+  const hm=holidayMap(y);
+  const emps=employees.filter(e=>e.dept===dept).sort((a,b)=>a.name.localeCompare(b.name));
+  const wd=['S','M','T','W','T','F','S'];
+  const isos=[]; for(let d=1;d<=dim;d++) isos.push(y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'));
+  let h='<table class="pl"><tr><th class="pname">'+esc(dept)+'</th>';
+  isos.forEach((iso,i)=>{
+    const dow=new Date(y,m-1,i+1).getDay(), hol=hm[iso];
+    h+=`<th class="${dow===0||dow===6?'we':''} ${hol?'hol':''}" title="${hol?esc(hol):''}">${i+1}<br><span class="wd">${wd[dow]}</span></th>`;
+  });
+  h+='</tr><tr><td class="pname">Weekend shift</td>';
+  isos.forEach((iso,i)=>{
+    const dow=new Date(y,m-1,i+1).getDay();
+    const ws=entries.filter(e=>isShift(e) && e.dept===dept && e.from<=iso && e.to>=iso);
+    const lbl=ws.map(e=>shortName(e.name)+(e.swap?'→'+shortName(e.swap):'')).join(' ');
+    h+=`<td class="ws ${dow===0||dow===6?'we':''}">${esc(lbl)}</td>`;
+  });
+  h+='</tr>';
+  emps.forEach(emp=>{
+    h+=`<tr><td class="pname">${esc(emp.name)}</td>`;
+    isos.forEach((iso,i)=>{
+      const dow=new Date(y,m-1,i+1).getDay(), hol=hm[iso];
+      const ent=entries.find(e=>!isShift(e) && norm(e.name)===norm(emp.name) && e.from<=iso && e.to>=iso);
+      if(ent){ const r=reasonOf(ent);
+        h+=`<td style="background:${r.color};color:#fff" title="${esc(emp.name)} — ${esc(r.name)}${ent.vessel?' ('+esc(ent.vessel)+')':''}">${esc(r.id)}</td>`;
+      } else {
+        h+=`<td class="${dow===0||dow===6?'we':''} ${hol?'hol':''}"></td>`;
+      }
+    });
+    h+='</tr>';
+  });
+  h+='</table>';
+  return h;
+}
+function clipDays(e, s, t){
+  const a = e.from > s ? e.from : s, b = e.to < t ? e.to : t;
+  return Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/86400000) + 1;
+}
+function monthListHTML(y,m,dept){
+  const s = y+'-'+String(m).padStart(2,'0')+'-01';
+  const t = y+'-'+String(m).padStart(2,'0')+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');
+  const emps = employees.filter(e=>e.dept===dept).sort((a,b)=>a.name.localeCompare(b.name));
+  let h='', deptTotal=0, any=false;
+  emps.forEach(emp=>{
+    const list = entries.filter(e=>norm(e.name)===norm(emp.name) && e.from<=t && e.to>=s).sort((a,b)=>a.from<b.from?-1:1);
+    if(!list.length) return;
+    any=true;
+    let personDays=0;
+    h+=`<div class="dept-head">${esc(emp.name)}</div><table><tr><th>Dates</th><th>Days (this month)</th><th>Reason</th><th>Details</th></tr>`;
+    list.forEach(e=>{
+      const r=reasonOf(e), d=clipDays(e,s,t);
+      if(!isShift(e)){ personDays+=d; deptTotal+=d; }
+      h+=`<tr><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td>${d}</td>
+      <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}</td>
+      <td>${esc(e.vessel||'')}${e.swap?'⇄ '+esc(e.swap):''}${e.note?' · '+esc(e.note):''}</td></tr>`;
+    });
+    h+=`</table><p class="muted">Absence days in month (excl. weekend shifts): <strong>${personDays}</strong></p>`;
+  });
+  if(!any) return '<p class="muted">Nothing recorded for this department this month.</p>';
+  return h + `<div class="dept-head">Department total</div><p><strong>${deptTotal}</strong> absence days this month (excl. weekend shifts).</p>`;
+}
+function renderPlanner(){
+  if(!$('plannerMonth').value) $('plannerMonth').value=new Date().toISOString().slice(0,7);
+  const dept=$('plannerDept').value;
+  const [y,m]=$('plannerMonth').value.split('-').map(Number);
+  const mn=new Date(y,m-1,1).toLocaleString('en-GB',{month:'long'});
+  const body = ($('plannerFmt').value||'grid')==='list' ? monthListHTML(y,m,dept) : monthGridHTML(y,m,dept);
+  $('plannerOut').innerHTML=`<h2>${esc(dept)} — ${mn} ${y}</h2>`+body;
+}
+function renderPlannerYear(){
+  const dept=$('plannerDept').value;
+  const y=+(($('plannerMonth').value||'').slice(0,4)) || new Date().getFullYear();
+  let h=`<h2>${esc(dept)} — Planner ${y}</h2>`;
+  for(let m=1;m<=12;m++){
+    h+=`<div class="dept-head">${new Date(y,m-1,1).toLocaleString('en-GB',{month:'long'}).toUpperCase()} ${y}</div>`+monthGridHTML(y,m,dept);
+  }
+  $('plannerOut').innerHTML=h;
+}
+
+/* ---------- weekly grid (Format B) ---------- */
+function weekGridHTML(ws, list){
+  const days=[];
+  for(let i=0;i<7;i++){ const d=new Date(ws+'T12:00:00'); d.setDate(d.getDate()+i); days.push(d.toISOString().slice(0,10)); }
+  const hm = Object.assign({}, holidayMap(+ws.slice(0,4)), holidayMap(+days[6].slice(0,4)));
+  const wd=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const people=[...new Map(list.map(e=>[norm(e.name),{name:e.name,dept:e.dept}])).values()]
+    .sort((a,b)=>a.dept.localeCompare(b.dept)||a.name.localeCompare(b.name));
+  if(!people.length) return '<p class="muted">No absences recorded this week.</p>';
+  let h='<table class="pl"><tr><th class="pname">Name</th><th>Department</th>';
+  days.forEach((iso,i)=>{ const hol=hm[iso];
+    h+=`<th class="${i>=5?'we':''} ${hol?'hol':''}" title="${hol?esc(hol):''}">${wd[i]}<br><span class="wd">${fmt(iso).slice(0,5)}</span></th>`; });
+  h+='<th>Total</th></tr>';
+  people.forEach(p=>{
+    let tot=0;
+    h+=`<tr><td class="pname">${esc(p.name)}</td><td style="text-align:left">${esc(p.dept)}</td>`;
+    days.forEach((iso,i)=>{
+      const ent = list.find(e=>norm(e.name)===norm(p.name)&&e.from<=iso&&e.to>=iso&&!isShift(e))
+               || list.find(e=>norm(e.name)===norm(p.name)&&e.from<=iso&&e.to>=iso);
+      if(ent){ const r=reasonOf(ent); if(!isShift(ent)) tot++;
+        h+=`<td style="background:${r.color};color:#fff" title="${esc(r.name)}${ent.vessel?' ('+esc(ent.vessel)+')':''}${ent.swap?' ⇄ '+esc(ent.swap):''}">${esc(r.id)}</td>`;
+      } else { const hol=hm[iso]; h+=`<td class="${i>=5?'we':''} ${hol?'hol':''}"></td>`; }
+    });
+    h+=`<td><strong>${tot}</strong></td></tr>`;
+  });
+  h+='</table><p class="muted" style="margin-top:8px">Key: '+reasons.map(r=>`<span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}`).join(' &nbsp;·&nbsp; ')+'</p>';
+  return h;
 }
 
 /* ---------- settings ---------- */
@@ -384,6 +636,13 @@ function renderSettings(){
      <button class="del" onclick="delEmployee(${i})">✕</button></div>`;}).join('')
     : '<p class="muted">No employees yet — add them below or paste a list.</p>';
   $('newEmpDept').innerHTML = depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  const hy = parseInt($('holYear').value) || new Date().getFullYear();
+  $('holYear').value = hy;
+  const hm = holidayMap(hy);
+  $('holidayList').innerHTML = Object.keys(hm).sort().map(d=>{
+    const ci = customHols.findIndex(h=>h.date===d);
+    return `<div class="list-item"><span>${fmt(d)} — ${esc(hm[d])}</span>${ci>-1?`<button class="del" onclick="delHoliday(${ci})">✕</button>`:`<span class="muted">auto</span>`}</div>`;
+  }).join('');
   $('reasonList').innerHTML = reasons.map((r,i)=>
     `<div class="list-item"><span><span class="tag" style="background:${r.color}">${esc(r.id)}</span>
      <input type="text" value="${esc(r.name)}" style="width:auto;display:inline-block;padding:8px;font-size:15px;margin-left:8px" onchange="renameReason(${i},this.value)">
@@ -439,7 +698,7 @@ function delDept(i){ if(!confirm('Remove department "'+depts[i]+'"?'))return; de
 
 /* ---------- export / import ---------- */
 function exportData(){
-  const blob = new Blob([JSON.stringify({entries,reasons,vessels,depts,employees},null,2)],{type:'application/json'});
+  const blob = new Blob([JSON.stringify({entries,reasons,vessels,depts,employees,customHols},null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'est-movement-backup-'+new Date().toISOString().slice(0,10)+'.json';
@@ -451,8 +710,8 @@ function importData(ev){
   r.onload = () => { try {
     const d = JSON.parse(r.result);
     if(d.entries) entries=d.entries; if(d.reasons) reasons=d.reasons;
-    if(d.vessels) vessels=d.vessels; if(d.depts) depts=d.depts; if(d.employees) employees=d.employees;
-    save(K.entries,entries); save(K.reasons,reasons); save(K.vessels,vessels); save(K.depts,depts); save(K.emps,employees);
+    if(d.vessels) vessels=d.vessels; if(d.depts) depts=d.depts; if(d.employees) employees=d.employees; if(d.customHols) customHols=d.customHols;
+    save(K.entries,entries); save(K.reasons,reasons); save(K.vessels,vessels); save(K.depts,depts); save(K.emps,employees); save(K.hols,customHols);
     initRender(); toast('Backup imported ✔');
   } catch { toast('Could not read that file'); } };
   r.readAsText(f);
@@ -465,6 +724,9 @@ function clearAll(){
 /* ---------- init ---------- */
 function initRender(){
   renderReasonButtons(); renderDeptSelect(); renderVesselSelect();
+  $('plannerDept').innerHTML = depts.map(d=>`<option${d==='Technical'?' selected':''}>${esc(d)}</option>`).join('');
+  $('reportDept').innerHTML = `<option value="__all__">All departments</option>` + depts.map(d=>`<option>${esc(d)}</option>`).join('');
+  if(!$('plannerMonth').value) $('plannerMonth').value = new Date().toISOString().slice(0,7);
   renderEmpSelect(); renderRecent(); renderSettings();
 }
 initRender();
