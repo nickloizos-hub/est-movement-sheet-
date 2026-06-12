@@ -30,6 +30,12 @@ header .sub{font-size:13px;color:#9fb3c0}
 nav{background:var(--ink);padding:0 16px 0}
 nav .tabs{max-width:980px;margin:0 auto;display:flex;gap:6px}
 nav button{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:14px 8px;border:none;border-radius:12px 12px 0 0;background:#1c3a52;color:#aebfca;cursor:pointer;min-height:52px}
+nav button.log-tab{border-top:3px solid transparent;color:#ffb347}
+nav button.log-tab.active{background:var(--paper);color:#c46a00;border-top:4px solid var(--accent)}
+nav button.report-tab{border-top:3px solid transparent;color:#6fcf97}
+nav button.report-tab.active{background:var(--paper);color:#1a7a42;border-top:4px solid #27ae60}
+nav button.admin-tab{border-top:3px solid transparent;color:#74b9ff}
+nav button.admin-tab.active{background:var(--paper);color:#1a5276;border-top:4px solid #2980b9}
 nav button.active{background:var(--paper);color:var(--ink)}
 nav button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
@@ -57,6 +63,14 @@ th{font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:.06em
 td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:#fff;padding:3px 9px;border-radius:6px}
 .dept-head{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-left:6px solid var(--accent);padding-left:10px;margin:22px 0 4px}
+.dept-block{border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin:16px 0}
+.dept-block h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:0 0 12px;padding-bottom:8px;border-bottom:3px solid var(--ink)}
+.cat-label{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+.cat-label:first-of-type{margin-top:0}
+.sub-row{display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #eef1f3;font-size:14px;align-items:baseline}
+.sub-row .sub-label{min-width:90px;font-weight:600;color:var(--muted);font-size:13px;text-transform:uppercase}
+.sub-row .sub-val{flex:1}
+.nil{color:#b0bec5;font-style:italic;font-size:13px}
 .muted{color:var(--muted);font-size:14px}
 .del{background:none;border:none;color:var(--medical);font-size:18px;cursor:pointer;min-width:44px;min-height:44px}
 .list-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -80,23 +94,24 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 <header>
   <div class="brand">
     <h1>EST <span>Movement</span> Sheet</h1>
-    <div class="sub">Weekly office attendance &amp; absence log</div>
+    <div class="sub">Office movements, attendance &amp; duty tracker</div>
   </div>
 </header>
 <nav><div class="tabs">
-  <button id="tab-log" class="active" onclick="showTab('log')">Log Absence</button>
-  <button id="tab-weekend" onclick="showTab('weekend')">Weekend Duty</button>
-  <button id="tab-report" onclick="showTab('report')">Weekly Report</button>
-  <button id="tab-planner" onclick="showTab('planner')">Planner</button>
-  <button id="tab-rules" onclick="showTab('rules')">Rules</button>
-  <button id="tab-settings" onclick="showTab('settings')">Settings</button>
+  <button id="tab-log" class="log-tab active" onclick="showTab('log')">Log Movement</button>
+  <button id="tab-weekend" class="log-tab" onclick="showTab('weekend')">Log Weekend Duty</button>
+  <button id="tab-report" class="report-tab" onclick="showTab('report')">Weekly Overview</button>
+  <button id="tab-planner" class="report-tab" onclick="showTab('planner')">Department Planner</button>
+  <button id="tab-rules" class="admin-tab" onclick="showTab('rules')">Rules</button>
+  <button id="tab-db" class="admin-tab" onclick="showTab('db')">Database</button>
+  <button id="tab-settings" class="admin-tab" onclick="showTab('settings')">Settings</button>
 </div></nav>
 <main>
 
 <!-- ============ LOG TAB ============ -->
 <section id="view-log">
   <div class="card">
-    <h2>New Absence Entry</h2>
+    <h2>Log Movement</h2>
     <div class="row">
       <div>
         <label for="empSel">Employee</label>
@@ -137,7 +152,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
   </div>
 
   <div class="card">
-    <h2>Recent Entries</h2>
+    <h2>Recent Movements</h2>
     <div id="recentList" class="muted">No entries yet.</div>
   </div>
 </section>
@@ -145,7 +160,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 <!-- ============ WEEKEND DUTY TAB ============ -->
 <section id="view-weekend" class="hidden">
   <div class="card">
-    <h2>Weekend / Holiday Duty</h2>
+    <h2>Log Weekend Duty</h2>
     <div class="row">
       <div><label for="wsEmp">Employee on duty</label><select id="wsEmp" onchange="wsEmpPicked()"></select></div>
       <div><label for="wsDept">Department</label><select id="wsDept"></select></div>
@@ -171,8 +186,8 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 <!-- ============ REPORT TAB ============ -->
 <section id="view-report" class="hidden">
   <div class="card no-print">
-    <h2>Weekly Report</h2>
-    <p class="muted">Pick any date — the report covers that week (Monday to Sunday). Send the report every Friday by 17:00.</p>
+    <h2>Weekly Overview</h2>
+    <p class="muted">Pick any date to see that week (Monday to Sunday). The Friday report to Mr. Sarris and Ms. Kyskira is due by 17:00.</p>
     <label for="weekDate">Week of</label>
     <input type="date" id="weekDate" onchange="renderReport()">
     <div class="row">
@@ -190,7 +205,7 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 <!-- ============ PLANNER TAB ============ -->
 <section id="view-planner" class="hidden">
   <div class="card no-print">
-    <h2>Planner</h2>
+    <h2>Department Planner</h2>
     <div class="row">
       <div><label for="plannerDept">Department</label><select id="plannerDept" onchange="renderPlanner()"></select></div>
       <div><label for="plannerMonth">Month</label><input type="month" id="plannerMonth" onchange="renderPlanner()"></div>
@@ -234,6 +249,31 @@ td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top}
     <div class="add-row">
       <input type="text" id="newRule" placeholder="Write a rule, e.g. Max 2 people on leave per department">
       <button class="btn solid" onclick="addRule()">Add</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DATABASE TAB ============ -->
+<section id="view-db" class="hidden">
+  <div class="card">
+    <h2>Server Connection</h2>
+    <p class="muted">The site talks to the SQL database through an API provided by EDP. Enter the API address and key they issue, then press Test. Until then the site runs in Local mode (browser storage).</p>
+    <div class="row">
+      <div><label for="dbUrl">API address</label><input type="text" id="dbUrl" placeholder="http://estserver.ensh.local/api"></div>
+      <div><label for="dbKey">API key</label><input type="text" id="dbKey" placeholder="issued by EDP"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn solid" onclick="testDb()">Test connection</button>
+      <span id="dbStatus" class="tag" style="background:#5b6f7d;align-self:center">LOCAL MODE — browser storage</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>For EDP — Setup Package</h2>
+    <p class="muted">Three files that tell EDP exactly what to build: the database tables, the current data ready to load, and the API the site expects.</p>
+    <div class="btn-row">
+      <button class="btn solid" onclick="dlSchema()">Download schema.sql</button>
+      <button class="btn solid" onclick="dlDataSql()">Download data.sql</button>
+      <button class="btn" onclick="dlApiSpec()">Download API specification</button>
     </div>
   </div>
 </section>
@@ -315,7 +355,7 @@ const K = {entries:'est_entries', reasons:'est_reasons', vessels:'est_vessels', 
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
-const DEFAULT_ENTRIES = [{"id": 1000001, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-05", "to": "2026-02-06", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000002, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-09", "to": "2026-02-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000003, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-24", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000004, "name": "George Chronis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000005, "name": "George Chronis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000006, "name": "George Chronis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000007, "name": "Sophia Drosou", "dept": "Technical", "from": "2026-02-27", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000008, "name": "Sophia Drosou", "dept": "Technical", "from": "2026-03-02", "to": "2026-03-03", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000009, "name": "Lia Karagianni", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000010, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000011, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000012, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000013, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000014, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-04-06", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000015, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-06-22", "to": "2026-06-26", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000016, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-16", "to": "2026-03-20", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000017, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-23", "to": "2026-03-24", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000018, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000019, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-03-09", "to": "2026-03-11", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000020, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000021, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-06-15", "to": "2026-06-19", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000022, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000023, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000024, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-12", "to": "2026-01-16", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000025, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-02-11", "to": "2026-02-13", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000026, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-04-20", "to": "2026-04-24", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000027, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000028, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000029, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-04-06", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000030, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000031, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000032, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-05-06", "to": "2026-05-08", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000033, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-05-11", "to": "2026-05-13", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000034, "name": "George Tzortzis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000035, "name": "George Tzortzis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000036, "name": "George Tzortzis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000037, "name": "George Tzortzis", "dept": "Technical", "from": "2026-04-20", "to": "2026-04-20", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000038, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000039, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000040, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000041, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-04-08", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000042, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-14", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000043, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000044, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000045, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-02-25", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000046, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000047, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-01", "to": "2026-01-01", "reason": "WS", "vessel": "", "swap": "Antonios Psyllas", "note": "duty rota 2026"}, {"id": 1000048, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-01-03", "to": "2026-01-03", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000049, "name": "George Chronis", "dept": "Technical", "from": "2026-01-06", "to": "2026-01-06", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000050, "name": "Theocharis (Tech)", "dept": "Technical", "from": "2026-01-10", "to": "2026-01-11", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000051, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-17", "to": "2026-01-17", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000052, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-01-24", "to": "2026-01-25", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000053, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-31", "to": "2026-01-31", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000054, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-02-07", "to": "2026-02-08", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000055, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-02-14", "to": "2026-02-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000056, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-02-21", "to": "2026-02-22", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000057, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-02-23", "to": "2026-02-23", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000058, "name": "George Chronis", "dept": "Technical", "from": "2026-02-28", "to": "2026-02-28", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000059, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-03-07", "to": "2026-03-08", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000060, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-03-14", "to": "2026-03-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000061, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-03-21", "to": "2026-03-22", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000062, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-25", "to": "2026-03-25", "reason": "WS", "vessel": "", "swap": "Antonios Psyllas", "note": "duty rota 2026"}, {"id": 1000063, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-03-28", "to": "2026-03-28", "reason": "WS", "vessel": "", "swap": "Ilias Kokiopoulos", "note": "duty rota 2026"}, {"id": 1000064, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-04-04", "to": "2026-04-05", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000065, "name": "George Chronis", "dept": "Technical", "from": "2026-04-10", "to": "2026-04-10", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000066, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-04-11", "to": "2026-04-11", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000067, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-04-13", "to": "2026-04-13", "reason": "WS", "vessel": "", "swap": "Charalampos Kremidas", "note": "duty rota 2026"}, {"id": 1000068, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-04-18", "to": "2026-04-19", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000069, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-04-25", "to": "2026-04-25", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000070, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-05-01", "to": "2026-05-01", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000071, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-05-02", "to": "2026-05-03", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000072, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-05-09", "to": "2026-05-09", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000073, "name": "Nikos Linardos", "dept": "Technical", "from": "2026-05-16", "to": "2026-05-17", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000074, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-05-23", "to": "2026-05-23", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000075, "name": "George Chronis", "dept": "Technical", "from": "2026-05-30", "to": "2026-05-31", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000076, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-06-01", "to": "2026-06-01", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000077, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-06-06", "to": "2026-06-06", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000078, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000079, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-06-20", "to": "2026-06-20", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}].concat([{"id": 2000001, "name": "Kostas Angelaras", "dept": "Operations", "from": "2026-06-10", "to": "2026-06-12", "reason": "VA", "vessel": "ENERGY ATHENA", "swap": "", "note": "demo data"}, {"id": 2000002, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-06-09", "to": "2026-06-11", "reason": "VA", "vessel": "ENERGY DELOS", "swap": "", "note": "demo data"}, {"id": 2000003, "name": "Eleni Labrou", "dept": "Accounts", "from": "2026-06-11", "to": "2026-06-12", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000004, "name": "Hara Kalodouka", "dept": "Supply", "from": "2026-06-08", "to": "2026-06-12", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000005, "name": "Maria Zampeli", "dept": "Management", "from": "2026-06-11", "to": "2026-06-11", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000006, "name": "Katerina Karoussou", "dept": "Crew / ISPS - Security", "from": "2026-06-09", "to": "2026-06-10", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000007, "name": "Dimitris Vergis", "dept": "Claims", "from": "2026-06-15", "to": "2026-06-17", "reason": "VA", "vessel": "GLADIATOR", "swap": "", "note": "demo data"}, {"id": 2000008, "name": "Sofia Zogana", "dept": "QHSE / ISM", "from": "2026-06-15", "to": "2026-06-19", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000009, "name": "Elias Hadjithomas", "dept": "Operations", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "Filippos Fasilis", "note": "demo data"}, {"id": 2000010, "name": "Stavros Lymperis", "dept": "Supply", "from": "2026-06-16", "to": "2026-06-16", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}]);
+const DEFAULT_ENTRIES = [{"id": 1000001, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-05", "to": "2026-02-06", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000002, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-09", "to": "2026-02-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000003, "name": "Vangelis Candiotis", "dept": "Technical", "from": "2026-02-24", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000004, "name": "George Chronis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000005, "name": "George Chronis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000006, "name": "George Chronis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000007, "name": "Sophia Drosou", "dept": "Technical", "from": "2026-02-27", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000008, "name": "Sophia Drosou", "dept": "Technical", "from": "2026-03-02", "to": "2026-03-03", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000009, "name": "Lia Karagianni", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000010, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000011, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000012, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000013, "name": "Spiros Karnadakis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000014, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-04-06", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000015, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-06-22", "to": "2026-06-26", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000016, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-16", "to": "2026-03-20", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000017, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-23", "to": "2026-03-24", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000018, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000019, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-03-09", "to": "2026-03-11", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000020, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000021, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-06-15", "to": "2026-06-19", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000022, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000023, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000024, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-01-12", "to": "2026-01-16", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000025, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-02-11", "to": "2026-02-13", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000026, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-04-20", "to": "2026-04-24", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000027, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000028, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000029, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-04-06", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000030, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000031, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000032, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-05-06", "to": "2026-05-08", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000033, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-05-11", "to": "2026-05-13", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000034, "name": "George Tzortzis", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000035, "name": "George Tzortzis", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000036, "name": "George Tzortzis", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000037, "name": "George Tzortzis", "dept": "Technical", "from": "2026-04-20", "to": "2026-04-20", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000038, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000039, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000040, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-07", "to": "2026-01-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000041, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-04-08", "to": "2026-04-09", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000042, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-14", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000043, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-01-02", "to": "2026-01-02", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000044, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-01-05", "to": "2026-01-05", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000045, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-02-25", "to": "2026-02-27", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000046, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-04-14", "to": "2026-04-17", "reason": "H", "vessel": "", "swap": "", "note": "from 2026 planner"}, {"id": 1000047, "name": "Panagiotis Ziakas", "dept": "Technical", "from": "2026-01-01", "to": "2026-01-01", "reason": "WS", "vessel": "", "swap": "Antonios Psyllas", "note": "duty rota 2026"}, {"id": 1000048, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-01-03", "to": "2026-01-03", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000049, "name": "George Chronis", "dept": "Technical", "from": "2026-01-06", "to": "2026-01-06", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000050, "name": "Theocharis (Tech)", "dept": "Technical", "from": "2026-01-10", "to": "2026-01-11", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000051, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-01-17", "to": "2026-01-17", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000052, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-01-24", "to": "2026-01-25", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000053, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-01-31", "to": "2026-01-31", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000054, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-02-07", "to": "2026-02-08", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000055, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-02-14", "to": "2026-02-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000056, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-02-21", "to": "2026-02-22", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000057, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-02-23", "to": "2026-02-23", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000058, "name": "George Chronis", "dept": "Technical", "from": "2026-02-28", "to": "2026-02-28", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000059, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-03-07", "to": "2026-03-08", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000060, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-03-14", "to": "2026-03-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000061, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-03-21", "to": "2026-03-22", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000062, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-03-25", "to": "2026-03-25", "reason": "WS", "vessel": "", "swap": "Antonios Psyllas", "note": "duty rota 2026"}, {"id": 1000063, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-03-28", "to": "2026-03-28", "reason": "WS", "vessel": "", "swap": "Ilias Kokiopoulos", "note": "duty rota 2026"}, {"id": 1000064, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-04-04", "to": "2026-04-05", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000065, "name": "George Chronis", "dept": "Technical", "from": "2026-04-10", "to": "2026-04-10", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000066, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-04-11", "to": "2026-04-11", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000067, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-04-13", "to": "2026-04-13", "reason": "WS", "vessel": "", "swap": "Charalampos Kremidas", "note": "duty rota 2026"}, {"id": 1000068, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-04-18", "to": "2026-04-19", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000069, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-04-25", "to": "2026-04-25", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000070, "name": "Aris Ziatas", "dept": "Technical", "from": "2026-05-01", "to": "2026-05-01", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000071, "name": "Charalampos Kremidas", "dept": "Technical", "from": "2026-05-02", "to": "2026-05-03", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000072, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-05-09", "to": "2026-05-09", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000073, "name": "Nikos Linardos", "dept": "Technical", "from": "2026-05-16", "to": "2026-05-17", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000074, "name": "Thanasis Papachatzis", "dept": "Technical", "from": "2026-05-23", "to": "2026-05-23", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000075, "name": "George Chronis", "dept": "Technical", "from": "2026-05-30", "to": "2026-05-31", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000076, "name": "Goulielmos Roussos", "dept": "Technical", "from": "2026-06-01", "to": "2026-06-01", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000077, "name": "Ilias Kokiopoulos", "dept": "Technical", "from": "2026-06-06", "to": "2026-06-06", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000078, "name": "Ioannis Pavlou", "dept": "Technical", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}, {"id": 1000079, "name": "Antonis Polikandriotis", "dept": "Technical", "from": "2026-06-20", "to": "2026-06-20", "reason": "WS", "vessel": "", "swap": "", "note": "duty rota 2026"}].concat([{"id": 2000001, "name": "Kostas Angelaras", "dept": "Operations", "from": "2026-06-10", "to": "2026-06-12", "reason": "VA", "vessel": "ENERGY ATHENA", "swap": "", "note": "demo data"}, {"id": 2000002, "name": "Antonios Psyllas", "dept": "Technical", "from": "2026-06-09", "to": "2026-06-11", "reason": "VA", "vessel": "ENERGY DELOS", "swap": "", "note": "demo data"}, {"id": 2000003, "name": "Eleni Labrou", "dept": "Accounts", "from": "2026-06-11", "to": "2026-06-12", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000004, "name": "Hara Kalodouka", "dept": "Supply", "from": "2026-06-08", "to": "2026-06-12", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000005, "name": "Maria Zampeli", "dept": "Management", "from": "2026-06-11", "to": "2026-06-11", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000006, "name": "Katerina Karoussou", "dept": "Crew / ISPS - Security", "from": "2026-06-09", "to": "2026-06-10", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000007, "name": "Dimitris Vergis", "dept": "Claims", "from": "2026-06-15", "to": "2026-06-17", "reason": "VA", "vessel": "GLADIATOR", "swap": "", "note": "demo data"}, {"id": 2000008, "name": "Sofia Zogana", "dept": "QHSE / ISM", "from": "2026-06-15", "to": "2026-06-19", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 2000009, "name": "Elias Hadjithomas", "dept": "Operations", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "Filippos Fasilis", "note": "demo data"}, {"id": 2000010, "name": "Stavros Lymperis", "dept": "Supply", "from": "2026-06-16", "to": "2026-06-16", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}].concat([{"id": 3000001, "name": "Stelios Charmesizis", "dept": "Chartering (Bulk Carriers)", "from": "2026-06-10", "to": "2026-06-12", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000002, "name": "Xenia Rigou", "dept": "Chartering (Bulk Carriers)", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000003, "name": "Kyriakos Zarvanos", "dept": "Chartering (Tankers)", "from": "2026-06-11", "to": "2026-06-11", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000004, "name": "Jenny Georgala", "dept": "Spares", "from": "2026-06-09", "to": "2026-06-13", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000005, "name": "Anthea Sarri", "dept": "Spares", "from": "2026-06-12", "to": "2026-06-12", "reason": "VA", "vessel": "ENERGY ARTEMIS", "swap": "", "note": "demo data"}, {"id": 3000006, "name": "Bella Politis", "dept": "Forwarding", "from": "2026-06-10", "to": "2026-06-11", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000007, "name": "Tasos Triantafillidis", "dept": "Operations (Tankers) / Vetting", "from": "2026-06-09", "to": "2026-06-13", "reason": "VA", "vessel": "ENERGY TRIUMPH", "swap": "", "note": "demo data"}, {"id": 3000008, "name": "Orestis Perilis", "dept": "Operations (Tankers) / Vetting", "from": "2026-06-11", "to": "2026-06-12", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000009, "name": "Theodore Voryllas", "dept": "Operations (Tankers) / Vetting", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "Aristeidis Zoros", "note": "demo data"}, {"id": 3000010, "name": "Irene Kritikou", "dept": "Treasury", "from": "2026-06-10", "to": "2026-06-10", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000011, "name": "Georgia Ropali", "dept": "Finance", "from": "2026-06-11", "to": "2026-06-13", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000012, "name": "Dimitra Kousiouri", "dept": "Legal", "from": "2026-06-09", "to": "2026-06-10", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000013, "name": "Evi Zachari", "dept": "Legal", "from": "2026-06-12", "to": "2026-06-12", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000014, "name": "Xenia Lolou", "dept": "Protocol", "from": "2026-06-11", "to": "2026-06-12", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000015, "name": "Filio Bakaouka", "dept": "Reception", "from": "2026-06-10", "to": "2026-06-11", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000016, "name": "Giannis Christou", "dept": "Reception", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "Nikos Loutrianakis", "note": "demo data"}, {"id": 3000017, "name": "Renata Lukasiak", "dept": "Cafeteria - Store Room", "from": "2026-06-09", "to": "2026-06-10", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000018, "name": "Christos Pourikis", "dept": "Cafeteria - Store Room", "from": "2026-06-12", "to": "2026-06-12", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000019, "name": "Gerasimos Avgeris", "dept": "F-Estimation S.A.", "from": "2026-06-10", "to": "2026-06-12", "reason": "VA", "vessel": "COLOSSUS", "swap": "", "note": "demo data"}, {"id": 3000020, "name": "Stamatis Gizas", "dept": "E.D.P. (IT)", "from": "2026-06-11", "to": "2026-06-11", "reason": "U", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000021, "name": "Costas Zarmakoupis", "dept": "E.D.P. (IT)", "from": "2026-06-09", "to": "2026-06-10", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000022, "name": "Marinos Mavrommatis", "dept": "Freight", "from": "2026-06-10", "to": "2026-06-12", "reason": "VA", "vessel": "WARRIOR", "swap": "", "note": "demo data"}, {"id": 3000023, "name": "Mina Seitanidou", "dept": "Control", "from": "2026-06-11", "to": "2026-06-12", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000024, "name": "Konstantinos Leotatis", "dept": "Control", "from": "2026-06-09", "to": "2026-06-09", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000025, "name": "Chrisoula Gerodimou", "dept": "Banking", "from": "2026-06-10", "to": "2026-06-11", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000026, "name": "Thomae Nikolaou", "dept": "Banking", "from": "2026-06-13", "to": "2026-06-14", "reason": "WS", "vessel": "", "swap": "", "note": "demo data"}].concat([{"id": 3000027, "name": "Katerina Gemidopoulou", "dept": "QHSE / ISM", "from": "2026-06-10", "to": "2026-06-11", "reason": "H", "vessel": "", "swap": "", "note": "demo data"}, {"id": 3000028, "name": "Vassilis Papaiakovou", "dept": "Claims", "from": "2026-06-09", "to": "2026-06-11", "reason": "VA", "vessel": "FURIOUS", "swap": "", "note": "demo data"}, {"id": 3000029, "name": "Vassilis Georgakopoulos", "dept": "Claims", "from": "2026-06-12", "to": "2026-06-12", "reason": "M", "vessel": "", "swap": "", "note": "demo data"}])));
 let entries = load(K.entries, DEFAULT_ENTRIES);
 let reasons = load(K.reasons, [
   {id:'H',  name:'Holiday',           color:'#1273b5', vessel:false},
@@ -348,14 +388,15 @@ function nextColor(){ const c=['#b56a12','#12649b','#5f7a0d','#9b1264','#0d6a7a'
 
 /* ---------- tabs ---------- */
 function showTab(t){
-  ['log','weekend','report','planner','rules','settings'].forEach(x=>{
+  ['log','weekend','report','planner','rules','db','settings'].forEach(x=>{
     $('view-'+x).classList.toggle('hidden', x!==t);
-    $('tab-'+x).classList.toggle('active', x===t);
+    const btn=$('tab-'+x); btn.classList.toggle('active', x===t);
   });
   if(t==='report') renderReport();
   if(t==='planner') renderPlanner();
   if(t==='weekend'){ renderWsQuick(); renderWsList(); }
   if(t==='rules') renderRules();
+  if(t==='db') renderDb();
 }
 
 /* ---------- render pickers ---------- */
@@ -463,41 +504,45 @@ function renderReport(){
   const [ws, we] = weekBounds(wd);
   const rd = $('reportDept').value || '__all__';
   const list = entriesInWeek(ws, we).filter(e => rd==='__all__' || e.dept===rd);
-  let html = `<h2>Weekly Movement Report${rd==='__all__'?'':' — '+esc(rd)}</h2><p class="muted">Week ${fmt(ws)} – ${fmt(we)} · Generated ${new Date().toLocaleDateString('en-GB')}</p>`;
+  let html = `<h2>Weekly Overview${rd==='__all__'?'':' — '+esc(rd)}</h2><p class="muted">Week ${fmt(ws)} – ${fmt(we)} · Generated ${new Date().toLocaleDateString('en-GB')}</p>`;
   const hols = holidaysInRange(ws, we);
   if(hols.length) html += `<p class="muted">Public holidays this week: ${hols.map(h=>fmt(h.date)+' '+esc(h.name)).join(' · ')}</p>`;
   if(($('reportFmt').value||'existing')==='grid'){ $('reportOut').innerHTML = html + weekGridHTML(ws, list); return; }
-  const shifts = list.filter(isShift);
-  const offsite = list.filter(e=>isWork(e) && !isShift(e));
-  const abs = list.filter(isAbsence);
-  if(!abs.length && !shifts.length && !offsite.length){ $('reportOut').innerHTML = html + '<p class="muted">Nothing recorded this week.</p>'; return; }
-  const byDept = {};
-  abs.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
-  Object.keys(byDept).sort().forEach(d=>{
-    html += `<div class="dept-head">Absent — ${esc(d)}</div><table><tr><th>Name</th><th>Dates</th><th>Days</th><th>Reason</th><th>Note</th></tr>`;
-    byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
-      html += `<tr><td><strong>${esc(e.name)}</strong></td>
-      <td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td>
-      <td>${countDays(e, ws, we, true)}</td>
-      <td><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}</td>
-      <td>${esc(e.note||'')}</td></tr>`;
+  if(!list.length){ $('reportOut').innerHTML = html + '<p class="muted">Nothing recorded this week.</p>'; return; }
+  const absReasons = reasons.filter(r=>!r.work && !r.shift);
+  const activeDepts = [...new Set(list.map(e=>e.dept))].sort();
+  activeDepts.forEach(dept=>{
+    const dl = list.filter(e=>e.dept===dept);
+    const dAbs = dl.filter(isAbsence);
+    const dOff = dl.filter(e=>isWork(e)&&!isShift(e));
+    const dDuty = dl.filter(isShift);
+    html += `<div class="dept-block"><h3>${esc(dept)}</h3>`;
+    // ABSENT
+    html += `<div class="cat-label">Absent</div>`;
+    absReasons.forEach(r=>{
+      const matches = dAbs.filter(e=>e.reason===r.id).sort((a,b)=>a.name.localeCompare(b.name));
+      html += `<div class="sub-row"><span class="sub-label"><span class="tag" style="background:${r.color}">${esc(r.id)}</span> ${esc(r.name)}</span><span class="sub-val">`;
+      if(matches.length){
+        html += matches.map(e=>`<strong>${esc(e.name)}</strong> (${fmt(e.from)}${e.to!==e.from?'–'+fmt(e.to):''}, ${countDays(e,ws,we,true)} day${countDays(e,ws,we,true)!==1?'s':''})`).join(' · ');
+      } else { html += `<span class="nil">—</span>`; }
+      html += `</span></div>`;
     });
-    html += `</table>`;
+    // WORKING OFF SITE
+    html += `<div class="cat-label">Working Off Site</div>`;
+    if(dOff.length){
+      dOff.sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{
+        html += `<div class="sub-row"><span class="sub-label"><span class="tag" style="background:#0d7a5f">VA</span> Vessel</span><span class="sub-val"><strong>${esc(e.name)}</strong> → ${esc(e.vessel||'—')} (${fmt(e.from)}${e.to!==e.from?'–'+fmt(e.to):''}, ${countDays(e,ws,we,false)} day${countDays(e,ws,we,false)!==1?'s':''})</span></div>`;
+      });
+    } else { html += `<div class="sub-row"><span class="sub-label">Vessel</span><span class="sub-val"><span class="nil">—</span></span></div>`; }
+    // ON DUTY
+    html += `<div class="cat-label">On Duty</div>`;
+    if(dDuty.length){
+      dDuty.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
+        html += `<div class="sub-row"><span class="sub-label"><span class="tag" style="background:#a36b00">WS</span> Weekend</span><span class="sub-val"><strong>${esc(e.name)}</strong> (${fmt(e.from)}${e.to!==e.from?'–'+fmt(e.to):''})${e.swap?' → '+esc(e.swap):''}</span></div>`;
+      });
+    } else { html += `<div class="sub-row"><span class="sub-label">Weekend</span><span class="sub-val"><span class="nil">—</span></span></div>`; }
+    html += `</div>`;
   });
-  if(offsite.length){
-    html += `<div class="dept-head">Working Off Site — Vessel Attendance</div><table><tr><th>Name</th><th>Vessel</th><th>Dates</th><th>Days</th><th>Department</th></tr>`;
-    offsite.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
-      html += `<tr><td><strong>${esc(e.name)}</strong></td><td>${esc(e.vessel||'—')}</td><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td>${countDays(e, ws, we, false)}</td><td>${esc(e.dept)}</td></tr>`;
-    });
-    html += `</table>`;
-  }
-  if(shifts.length){
-    html += `<div class="dept-head">Weekend Duty</div><table><tr><th>Name</th><th>Dates</th><th>Department</th><th>Swap</th></tr>`;
-    shifts.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
-      html += `<tr><td><strong>${esc(e.name)}</strong></td><td>${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''}</td><td>${esc(e.dept)}</td><td>${e.swap?'→ '+esc(e.swap):'—'}</td></tr>`;
-    });
-    html += `</table>`;
-  }
   $('reportOut').innerHTML = html;
 }
 function copyReport(){
@@ -505,34 +550,32 @@ function copyReport(){
   const [ws, we] = weekBounds(wd);
   const rd = $('reportDept').value || '__all__';
   const list = entriesInWeek(ws, we).filter(e => rd==='__all__' || e.dept===rd);
-  let txt = `EST MOVEMENT SHEET — WEEKLY REPORT${rd==='__all__'?'':' — '+rd.toUpperCase()}\nWeek: ${fmt(ws)} – ${fmt(we)}\n`;
+  let txt = `EST MOVEMENT SHEET — WEEKLY OVERVIEW${rd==='__all__'?'':' — '+rd.toUpperCase()}\nWeek: ${fmt(ws)} – ${fmt(we)}\n`;
   const hols = holidaysInRange(ws, we);
   if(hols.length) txt += 'Public holidays: ' + hols.map(h=>fmt(h.date)+' '+h.name).join(' · ') + '\n';
-  const shifts = list.filter(isShift);
-  const offsite = list.filter(e=>isWork(e) && !isShift(e));
-  const abs = list.filter(isAbsence);
-  if(!abs.length && !shifts.length && !offsite.length){ txt += '\nNothing recorded this week.\n'; }
+  if(!list.length){ txt += '\nNothing recorded this week.\n'; }
   else {
-    const byDept = {};
-    abs.forEach(e => (byDept[e.dept] = byDept[e.dept]||[]).push(e));
-    Object.keys(byDept).sort().forEach(d=>{
-      txt += `\n--- ABSENT: ${d.toUpperCase()} ---\n`;
-      byDept[d].sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{ const r=reasonOf(e);
-        txt += `• ${e.name} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${r.name}${e.vessel?' ('+e.vessel+')':''}${e.note?' | '+e.note:''}\n`;
+    const absReasons = reasons.filter(r=>!r.work && !r.shift);
+    const activeDepts = [...new Set(list.map(e=>e.dept))].sort();
+    activeDepts.forEach(dept=>{
+      const dl = list.filter(e=>e.dept===dept);
+      const dAbs = dl.filter(isAbsence);
+      const dOff = dl.filter(e=>isWork(e)&&!isShift(e));
+      const dDuty = dl.filter(isShift);
+      txt += `\n━━━ ${dept.toUpperCase()} ━━━\n`;
+      txt += `\nABSENT\n`;
+      absReasons.forEach(r=>{
+        const m = dAbs.filter(e=>e.reason===r.id).sort((a,b)=>a.name.localeCompare(b.name));
+        txt += `  ${r.name.padEnd(16)} ${m.length ? m.map(e=>e.name+' ('+fmt(e.from)+(e.to!==e.from?'–'+fmt(e.to):'')+', '+countDays(e,'0000-01-01','9999-12-31',true)+' days)').join(' · ') : '—'}\n`;
       });
+      txt += `\nWORKING OFF SITE\n`;
+      if(dOff.length){ dOff.forEach(e=>{ txt += `  Vessel          ${e.name} → ${e.vessel||'—'} (${fmt(e.from)}${e.to!==e.from?'–'+fmt(e.to):''}, ${countDays(e,'0000-01-01','9999-12-31',false)} days)\n`; }); }
+      else { txt += `  Vessel          —\n`; }
+      txt += `\nON DUTY\n`;
+      if(dDuty.length){ dDuty.forEach(e=>{ txt += `  Weekend         ${e.name} (${fmt(e.from)}${e.to!==e.from?'–'+fmt(e.to):''})${e.swap?' → '+e.swap:''}\n`; }); }
+      else { txt += `  Weekend         —\n`; }
+      txt += `\n`;
     });
-    if(offsite.length){
-      txt += `\n--- WORKING OFF SITE (VESSEL ATTENDANCE) ---\n`;
-      offsite.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
-        txt += `• ${e.name} | ${e.vessel||'—'} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${e.dept}\n`;
-      });
-    }
-    if(shifts.length){
-      txt += `\n--- WEEKEND DUTY ---\n`;
-      shifts.sort((a,b)=>a.from<b.from?-1:1).forEach(e=>{
-        txt += `• ${e.name} | ${fmt(e.from)}${e.to!==e.from?' – '+fmt(e.to):''} | ${e.dept}${e.swap?' | swapped with '+e.swap:''}\n`;
-      });
-    }
   }
   navigator.clipboard.writeText(txt).then(()=>toast('Report copied — paste into your email'));
 }
@@ -827,6 +870,149 @@ function downloadSite(){
   const dl = txt => { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/html'})); a.download='index.html'; a.click(); };
   fetch(window.location.href).then(r=>r.text()).then(dl)
     .catch(()=>dl('<!DOCTYPE html>\n'+document.documentElement.outerHTML));
+}
+
+/* ---------- database tab ---------- */
+const K_DB = 'est_dbconn';
+function renderDb(){
+  const c = load(K_DB, {url:'',key:''});
+  $('dbUrl').value = c.url||''; $('dbKey').value = c.key||'';
+}
+function setDbStatus(txt, color){ const s=$('dbStatus'); s.textContent=txt; s.style.background=color; }
+function testDb(){
+  const url = $('dbUrl').value.trim(), key = $('dbKey').value.trim();
+  save(K_DB, {url, key});
+  if(!url){ setDbStatus('LOCAL MODE — browser storage', '#5b6f7d'); return toast('No API address — staying in Local mode'); }
+  setDbStatus('TESTING…', '#b56a12');
+  fetch(url.replace(/\/$/,'') + '/health', {headers: key?{'X-Api-Key':key}:{}})
+    .then(r=>{ if(r.ok){ setDbStatus('CONNECTED TO SERVER', '#0d7a5f'); toast('Connection OK ✔'); }
+      else { setDbStatus('SERVER ERROR ' + r.status, '#c0392b'); toast('Server answered with error ' + r.status); } })
+    .catch(()=>{ setDbStatus('NOT REACHABLE — LOCAL MODE', '#c0392b'); toast('Server not reachable — check address or ask EDP'); });
+}
+function sqlEsc(v){ return v==null ? 'NULL' : "'" + String(v).replace(/'/g,"''") + "'"; }
+function dlFile(name, txt){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'})); a.download=name; a.click(); }
+function dlSchema(){
+  const s = `-- EST Movement Sheet — SQL Server schema
+-- Generated ${new Date().toISOString().slice(0,10)}
+
+CREATE TABLE departments (
+  id INT IDENTITY PRIMARY KEY,
+  name NVARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE employees (
+  id INT IDENTITY PRIMARY KEY,
+  name NVARCHAR(150) NOT NULL UNIQUE,
+  department_id INT NOT NULL REFERENCES departments(id),
+  active BIT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE vessels (
+  id INT IDENTITY PRIMARY KEY,
+  name NVARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE reasons (
+  code NVARCHAR(10) PRIMARY KEY,        -- H, M, VA, U, WS
+  name NVARCHAR(100) NOT NULL,
+  color NVARCHAR(10) NOT NULL,
+  requires_vessel BIT NOT NULL DEFAULT 0,
+  is_working BIT NOT NULL DEFAULT 0,    -- VA, WS = working time
+  is_shift BIT NOT NULL DEFAULT 0       -- WS only
+);
+
+CREATE TABLE entries (
+  id BIGINT IDENTITY PRIMARY KEY,
+  employee_id INT NOT NULL REFERENCES employees(id),
+  date_from DATE NOT NULL,
+  date_to DATE NOT NULL,
+  reason_code NVARCHAR(10) NOT NULL REFERENCES reasons(code),
+  vessel_id INT NULL REFERENCES vessels(id),
+  swap_employee_id INT NULL REFERENCES employees(id),
+  note NVARCHAR(400) NULL,
+  created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+  created_by NVARCHAR(100) NULL,
+  CONSTRAINT chk_dates CHECK (date_to >= date_from)
+);
+
+CREATE TABLE custom_holidays (
+  holiday_date DATE PRIMARY KEY,
+  name NVARCHAR(150) NOT NULL
+);
+
+CREATE TABLE company_rules (
+  id INT IDENTITY PRIMARY KEY,
+  rule_text NVARCHAR(500) NOT NULL
+);
+
+CREATE INDEX ix_entries_dates ON entries(date_from, date_to);
+CREATE INDEX ix_entries_employee ON entries(employee_id);
+`;
+  dlFile('schema.sql', s);
+}
+function dlDataSql(){
+  let s = '-- EST Movement Sheet — current data as INSERT statements\n-- Generated ' + new Date().toISOString() + '\n\n';
+  depts.forEach(d=>{ s += `INSERT INTO departments (name) VALUES (${sqlEsc(d)});\n`; });
+  s += '\n';
+  employees.forEach(e=>{ s += `INSERT INTO employees (name, department_id) SELECT ${sqlEsc(e.name)}, id FROM departments WHERE name=${sqlEsc(e.dept)};\n`; });
+  s += '\n';
+  vessels.forEach(v=>{ s += `INSERT INTO vessels (name) VALUES (${sqlEsc(v)});\n`; });
+  s += '\n';
+  reasons.forEach(r=>{ s += `INSERT INTO reasons (code, name, color, requires_vessel, is_working, is_shift) VALUES (${sqlEsc(r.id)}, ${sqlEsc(r.name)}, ${sqlEsc(r.color)}, ${r.vessel?1:0}, ${r.work?1:0}, ${r.shift?1:0});\n`; });
+  s += '\n';
+  entries.forEach(e=>{
+    s += `INSERT INTO entries (employee_id, date_from, date_to, reason_code, vessel_id, swap_employee_id, note) SELECT emp.id, ${sqlEsc(e.from)}, ${sqlEsc(e.to)}, ${sqlEsc(e.reason)}, ${e.vessel?`(SELECT id FROM vessels WHERE name=${sqlEsc(e.vessel)})`:'NULL'}, ${e.swap?`(SELECT id FROM employees WHERE name=${sqlEsc(e.swap)})`:'NULL'}, ${sqlEsc(e.note||'')} FROM employees emp WHERE emp.name=${sqlEsc(e.name)};\n`;
+  });
+  s += '\n';
+  customHols.forEach(h=>{ s += `INSERT INTO custom_holidays (holiday_date, name) VALUES (${sqlEsc(h.date)}, ${sqlEsc(h.name)});\n`; });
+  customRules.forEach(r=>{ s += `INSERT INTO company_rules (rule_text) VALUES (${sqlEsc(r)});\n`; });
+  dlFile('data.sql', s);
+  toast('data.sql generated — ' + entries.length + ' entries included');
+}
+function dlApiSpec(){
+  const s = `EST MOVEMENT SHEET — API SPECIFICATION FOR EDP
+Generated ${new Date().toISOString().slice(0,10)}
+
+The website expects a small REST API in front of the SQL database.
+All requests carry header:  X-Api-Key: <key issued by EDP>
+All responses are JSON. Base URL example: http://estserver.ensh.local/api
+
+ENDPOINTS (6):
+
+1) GET /health
+   Returns 200 with {"status":"ok"} — used by the Test Connection button.
+
+2) GET /entries?from=YYYY-MM-DD&to=YYYY-MM-DD
+   Returns entries overlapping the range:
+   [{"id":1,"name":"...","dept":"...","from":"2026-06-08","to":"2026-06-12",
+     "reason":"H","vessel":"","swap":"","note":""}]
+
+3) POST /entries
+   Body: same object without id. Returns the created entry with its id.
+
+4) DELETE /entries/{id}
+   Deletes one entry. Returns 204.
+
+5) GET /lookup
+   Returns all reference data in one call:
+   {"employees":[{"name":"...","dept":"..."}],
+    "departments":["..."], "vessels":["..."],
+    "reasons":[{"id":"H","name":"Holiday","color":"#1273b5",
+                "vessel":false,"work":false,"shift":false}],
+    "holidays":[{"date":"2026-01-01","name":"New Year"}],
+    "rules":["..."]}
+
+6) PUT /lookup
+   Accepts the same structure to update reference data. Returns 200.
+
+NOTES
+- SQL Server schema: see schema.sql (7 tables).
+- Initial data load: run data.sql after schema.sql.
+- Concurrency: last write wins is acceptable for phase 1.
+- Auth phase 1: single shared API key. Phase 2 can add per-user accounts.
+- CORS: allow the site origin (internal host or GitHub Pages during trial).
+`;
+  dlFile('api-specification.txt', s);
 }
 
 /* ---------- settings ---------- */
